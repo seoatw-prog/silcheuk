@@ -1,0 +1,17 @@
+{
+  "name": "현장 실측 사진첩",
+  "short_name": "실측 사진첩",
+  "description": "인터넷 없이 현장 사진에 치수를 적고, 사장님께 보내는 실측 앱",
+  "lang": "ko",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f8f3ed",
+  "theme_color": "#b8611a",
+  "icons": [
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}

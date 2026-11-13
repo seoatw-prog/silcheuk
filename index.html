@@ -1,0 +1,1793 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>현장 실측 사진첩</title>
+<meta name="theme-color" content="#b8611a">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<script>window.OFFLINE_APP = true;</script>
+<script src="jszip.min.js"></script>
+<script src="xlsx.full.min.js"></script>
+<style>
+/* layout: one-column field tool — 현장 목록 → 현장(사진·실측표) → 전체화면 사진 편집기
+   look: 따뜻한 미색 바탕 + 크림빛 카드, 살구빛 갈색 강조, 테두리 대신 옅은 그림자, 넉넉한 여백과 둥근 모서리. 노란색은 줄자·치수 표시에만 */
+:root{
+  --ink:#3b3029;
+  --paper:#f8f3ed;
+  --card:#fffdfa;
+  --line:#ece2d6;
+  --muted:#8b7b6c;
+  --accent:#b8611a;
+  --accent-ink:#ffffff;
+  --accent-soft:#fcefe2;
+  --mark:#f2b632;
+  --note:#fdf4e1;
+  --danger:#c4503d;
+  --danger-soft:#fbebe6;
+  --ok:#3d8a5a;
+  --ok-soft:#e8f3ea;
+  --shadow:0 1px 2px rgba(110,70,30,.05),0 6px 20px rgba(110,70,30,.07);
+  --shadow-up:0 -1px 0 rgba(110,70,30,.06),0 -8px 24px rgba(110,70,30,.07);
+  --bar-bg:rgba(255,252,248,.88);
+  --display:"IBM Plex Sans KR","Noto Sans KR",system-ui,sans-serif;
+  --body:"Noto Sans KR",system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --r:18px; --r-s:12px;
+  --ease:cubic-bezier(.2,.7,.2,1);
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ink:#f2e9df; --paper:#1a1613; --card:#241f1a; --line:#3a3129; --muted:#b4a594;
+    --accent:#f0a45f; --accent-ink:#2a170a; --accent-soft:#3a2a1d; --mark:#ffcc4d; --note:#33291b;
+    --danger:#ff8a75; --danger-soft:#3b231e; --ok:#7cc796; --ok-soft:#1d3024;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.28); --shadow-up:0 -8px 24px rgba(0,0,0,.3);
+    --bar-bg:rgba(36,31,26,.9);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#f2e9df; --paper:#1a1613; --card:#241f1a; --line:#3a3129; --muted:#b4a594;
+    --accent:#f0a45f; --accent-ink:#2a170a; --accent-soft:#3a2a1d; --mark:#ffcc4d; --note:#33291b;
+    --danger:#ff8a75; --danger-soft:#3b231e; --ok:#7cc796; --ok-soft:#1d3024;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.28); --shadow-up:0 -8px 24px rgba(0,0,0,.3);
+    --bar-bg:rgba(36,31,26,.9);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.6;-webkit-tap-highlight-color:transparent;-webkit-font-smoothing:antialiased}
+body.noscroll{overflow:hidden}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.3;letter-spacing:-.01em}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid color-mix(in srgb,var(--accent) 55%,transparent);outline-offset:2px}
+.wrap{max-width:720px;margin:0 auto;padding:20px max(18px,env(safe-area-inset-right)) 130px max(18px,env(safe-area-inset-left));animation:fadeUp .35s var(--ease)}
+.top{display:flex;align-items:center;gap:12px;padding-top:max(10px,env(safe-area-inset-top))}
+.top h1{font-size:24px;font-weight:700;flex:1}
+.sub{color:var(--muted);font-size:14px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:50px;padding:0 20px;border-radius:14px;border:0;background:var(--accent-soft);color:var(--accent);font-weight:700;font-size:16px;transition:transform .15s var(--ease),background-color .2s,box-shadow .2s}
+.btn:active{transform:scale(.97)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);box-shadow:0 4px 14px color-mix(in srgb,var(--accent) 28%,transparent)}
+.btn.danger{color:var(--danger);background:var(--danger-soft)}
+.btn.ghost{background:transparent;color:var(--accent)}
+.btn.small{min-height:42px;padding:0 14px;font-size:15px;border-radius:12px}
+.btn:disabled{opacity:.5}
+.btn svg{width:22px;height:22px;flex:none}
+.icon-btn{width:46px;height:46px;border-radius:14px;border:0;background:var(--card);color:var(--ink);box-shadow:var(--shadow);display:inline-flex;align-items:center;justify-content:center;flex:none;transition:transform .15s var(--ease)}
+.icon-btn:active{transform:scale(.94)}
+.icon-btn svg{width:22px;height:22px}
+.notice{background:var(--note);border:0;border-radius:var(--r);padding:14px 16px;font-size:15px}
+.notice.err{background:var(--danger-soft)}
+.search{width:100%;min-height:52px;border-radius:16px;border:1px solid transparent;background:var(--card);box-shadow:var(--shadow);padding:0 18px;transition:border-color .2s}
+.search:focus{border-color:color-mix(in srgb,var(--accent) 45%,transparent);outline:0}
+.list{display:grid;gap:12px}
+.site{display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:center;text-align:left;width:100%;background:var(--card);border:0;border-radius:var(--r);padding:16px 18px;box-shadow:var(--shadow);transition:transform .18s var(--ease),box-shadow .2s}
+.site:active{transform:scale(.985)}
+@media (hover:hover){.site:hover{box-shadow:0 2px 4px rgba(110,70,30,.06),0 10px 28px rgba(110,70,30,.1)}}
+.site b{font-size:18px;font-family:var(--display)}
+.site .sub{grid-column:1}
+.site .date{grid-row:1/3;align-self:start;grid-column:2;font-variant-numeric:tabular-nums;color:var(--muted);font-size:13px}
+.stack{display:grid;gap:18px}
+.pill{display:inline-block;font-size:12px;font-weight:700;border-radius:999px;padding:3px 10px;margin-top:4px}
+.pill.ok{background:var(--ok-soft);color:var(--ok)}
+.pill.warn{background:color-mix(in srgb,var(--mark) 26%,transparent);color:var(--ink)}
+.backup{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;background:var(--card);border:0;border-radius:var(--r);padding:16px 18px;box-shadow:var(--shadow)}
+.backup.due{background:var(--note);box-shadow:none}
+@media (max-width:420px){.backup{grid-template-columns:1fr}}
+.steps{display:grid;gap:12px;counter-reset:s;margin:0;padding:0;list-style:none}
+.steps li{counter-increment:s;display:grid;grid-template-columns:32px 1fr;gap:12px;align-items:start}
+.steps li::before{content:counter(s);width:30px;height:30px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-weight:700;font-size:14px}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 6px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;min-height:42px;padding:0 16px;border-radius:999px;border:0;background:var(--card);box-shadow:0 1px 2px rgba(110,70,30,.06),0 2px 8px rgba(110,70,30,.05);font-weight:500;white-space:nowrap;transition:background-color .2s,color .2s,transform .15s var(--ease)}
+.chip:active{transform:scale(.95)}
+.chip[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);font-weight:700}
+.chip .n{font-variant-numeric:tabular-nums;opacity:.7;margin-left:4px;font-size:13px}
+.label{font-size:13px;color:var(--muted);font-weight:700;letter-spacing:.03em}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);background:color-mix(in srgb,var(--line) 70%,transparent);border:0;border-radius:16px;padding:4px}
+.tabs button{min-height:44px;border:0;border-radius:12px;background:transparent;font-weight:700;color:var(--muted);transition:background-color .2s,color .2s}
+.tabs button[aria-selected="true"]{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(110,70,30,.1)}
+.group h3{font-size:17px;display:flex;align-items:baseline;gap:8px;margin-bottom:10px}
+.group h3 .sub{font-weight:400}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:10px}
+.thumb{position:relative;aspect-ratio:1;max-width:100%;border-radius:14px;overflow:hidden;border:0;background:var(--line);padding:0;box-shadow:var(--shadow);transition:transform .18s var(--ease)}
+.thumb:active{transform:scale(.96)}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb .no{position:absolute;left:7px;top:7px;background:rgba(40,28,18,.6);backdrop-filter:blur(4px);color:#fff;font-size:12px;font-weight:700;border-radius:8px;padding:1px 7px;font-variant-numeric:tabular-nums}
+.thumb .dims{position:absolute;right:7px;bottom:7px;background:var(--mark);color:#111;font-size:12px;font-weight:700;border-radius:8px;padding:1px 7px}
+.empty{color:var(--muted);text-align:center;padding:32px 12px;border:1.5px dashed var(--line);border-radius:var(--r);background:color-mix(in srgb,var(--card) 50%,transparent)}
+table.m{width:100%;border-collapse:collapse;background:var(--card);border:0;border-radius:var(--r);overflow:hidden;font-variant-numeric:tabular-nums;box-shadow:var(--shadow)}
+table.m th,table.m td{padding:12px 14px;border-bottom:1px solid var(--line);text-align:left;font-size:15px}
+table.m th{font-size:12px;color:var(--muted);background:transparent;letter-spacing:.03em}
+table.m td.v{font-weight:700;font-size:17px;white-space:nowrap}
+table.m tr:last-child td{border-bottom:0}
+.memo{font-size:14px;color:var(--muted);margin-top:8px;white-space:pre-wrap}
+.tabs .miss{display:inline-block;margin-left:5px;padding:0 7px;border-radius:999px;background:var(--mark);color:#111;font-size:12px;font-variant-numeric:tabular-nums}
+.cl{display:grid;background:var(--card);border:0;border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow)}
+.cl-row{display:grid;grid-template-columns:26px 1fr auto;gap:12px;align-items:center;text-align:left;min-height:54px;padding:8px 16px;border:0;border-bottom:1px solid var(--line);background:transparent;transition:background-color .15s}
+.cl-row:active{background:var(--paper)}
+.cl-row:last-child{border-bottom:0}
+.cl-ic{width:24px;height:24px;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;font-weight:700;font-size:13px;line-height:1;transition:background-color .2s,border-color .2s}
+.cl-row.done .cl-ic{background:var(--ok);border-color:var(--ok);color:var(--card)}
+.cl-row.na .cl-ic{border-style:dashed;color:var(--muted)}
+.cl-row.na .cl-n{color:var(--muted);text-decoration:line-through}
+.cl-n{min-width:0}
+.cl-v{font-variant-numeric:tabular-nums;font-weight:700;text-align:right;max-width:46vw;overflow-wrap:anywhere}
+.cl-row.todo .cl-v,.cl-row.na .cl-v{font-weight:400;color:var(--muted);font-size:14px}
+.cl-row.todo .cl-v{color:var(--danger)}
+.cl-v small{font-weight:400;color:var(--muted);font-size:12px}
+.fin{background:var(--card);border:0;border-radius:var(--r);padding:16px 18px;display:grid;gap:12px;box-shadow:var(--shadow)}
+.fin.ok{background:color-mix(in srgb,var(--ok-soft) 60%,var(--card))}
+.fin-h{display:grid;grid-template-columns:30px 1fr auto;gap:12px;align-items:center}
+.fin-h b{font-size:17px}
+.fin-n{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-weight:700;background:var(--accent-soft);color:var(--accent);font-variant-numeric:tabular-nums}
+.fin.ok .fin-n{background:var(--ok);color:var(--card)}
+.fin .pill{margin-top:0}
+.fin .miss-list{display:grid;gap:4px;font-size:14px}
+.fin .miss-list b{font-weight:700}
+.bar{position:fixed;left:0;right:0;bottom:0;background:var(--bar-bg);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:var(--shadow-up);padding:12px max(18px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(18px,env(safe-area-inset-left));z-index:5}
+.bar .in{max-width:720px;margin:0 auto;display:grid;grid-template-columns:1fr auto;gap:10px}
+.bar .btn{min-height:56px;font-size:17px;border-radius:16px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.claude{font-size:14px;color:var(--muted);background:transparent;border:1.5px dashed var(--line);border-radius:var(--r);padding:14px 16px}
+.claude b{color:var(--ink)}
+/* editor (사진 위에 그리는 화면은 사진이 잘 보이게 어두운 바탕 고정) */
+#editor{position:fixed;inset:0;background:#16120f;color:#fff;z-index:20;display:flex;flex-direction:column;animation:fadeIn .2s var(--ease)}
+#editor[hidden]{display:none}
+.ed-top{display:flex;align-items:center;gap:8px;padding:max(10px,env(safe-area-inset-top)) max(10px,env(safe-area-inset-right)) 8px max(10px,env(safe-area-inset-left))}
+.ed-top select{flex:1;min-width:0;min-height:44px;border-radius:12px;border:0;background:#2a231d;color:#fff;padding:0 12px;font-weight:700}
+.ed-top .btn{min-height:44px;background:#2a231d;color:#fff;box-shadow:none}
+.ed-top .btn.primary{background:var(--mark);color:#111}
+#edStage{flex:1;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden;min-height:0;touch-action:none}
+#cv{touch-action:none;display:block;border-radius:6px;transform-origin:0 0}
+#loupe{position:absolute;top:10px;width:132px;height:132px;border-radius:50%;border:3px solid #fff;box-shadow:0 4px 18px rgba(0,0,0,.6);pointer-events:none;display:none;background:#000}
+.ed-tools{display:flex;gap:6px;padding:8px max(10px,env(safe-area-inset-right)) 8px max(10px,env(safe-area-inset-left));align-items:center}
+.tools-scroll{display:flex;gap:6px;overflow-x:auto;flex:1;min-width:0;align-items:center;scrollbar-width:none}
+.tools-scroll::-webkit-scrollbar{display:none}
+.tools-fixed{display:flex;gap:6px;flex:none;padding-left:8px;border-left:1px solid #3b3229}
+.tool.icon{min-width:50px}
+.cdot{width:22px;height:22px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px #445}
+.ed-bottom{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end;padding:0 max(10px,env(safe-area-inset-right)) max(10px,env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left))}
+.ed-bottom .btn.primary{background:var(--mark);color:#111;min-height:50px;padding:0 26px;font-size:17px;box-shadow:none}
+.ed-bottom textarea{width:100%;min-height:48px;max-height:90px;border-radius:12px;border:0;background:#2a231d;color:#fff;padding:12px 14px;resize:none}
+.hint{font-size:13px;color:#bcaa98;padding:0 14px 4px;min-height:20px}
+.tool{flex:none;min-width:58px;min-height:56px;border-radius:14px;border:0;background:#2a231d;color:#e3d6c8;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:12px;font-weight:700;padding:4px 8px;transition:background-color .15s,color .15s,transform .15s var(--ease)}
+.tool:active{transform:scale(.94)}
+.tool svg{width:22px;height:22px}
+.tool[aria-pressed="true"]{background:#fff;color:#111}
+.swatch{flex:none;width:44px;height:44px;border-radius:50%;border:3px solid #2a231d;box-shadow:0 0 0 1px #445}
+.swatch[aria-pressed="true"]{box-shadow:0 0 0 3px #fff}
+.sep{width:1px;height:36px;background:#3b3229;flex:none;margin:0 4px}
+/* 치수 입력 창 */
+.dim-dlg{gap:14px}
+.flabel{font-size:14px;font-weight:700;color:var(--muted)}
+.flabel .sub{font-weight:400;font-size:12px}
+.dim-dlg [data-g="label"]{flex-wrap:wrap;overflow:visible}
+.dim-dlg .chip{background:var(--paper);box-shadow:none}
+.dim-dlg .chip[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.chip.small{min-height:38px;padding:0 13px;font-size:14px}
+.field input.small-in{min-height:46px;font-size:15px}
+.multi{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.multi input{width:100%;font-variant-numeric:tabular-nums}
+.linkbtn{border:0;background:none;color:var(--accent);font-weight:700;text-align:left;padding:8px 0;font-size:14px;min-height:40px}
+.err{color:var(--danger);font-size:14px;font-weight:700;margin:0}
+/* dialog: 아래에서 부드럽게 올라오는 시트 */
+.dlg-back{position:fixed;inset:0;background:rgba(45,30,18,.32);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);z-index:40;display:flex;align-items:flex-end;justify-content:center;animation:fadeIn .2s var(--ease)}
+.dlg{background:var(--card);color:var(--ink);width:100%;max-width:520px;border-radius:24px 24px 0 0;padding:12px max(20px,env(safe-area-inset-right)) max(20px,env(safe-area-inset-bottom)) max(20px,env(safe-area-inset-left));display:grid;gap:16px;max-height:92%;overflow:auto;box-shadow:0 -10px 40px rgba(45,30,18,.16);animation:sheetUp .3s var(--ease)}
+.dlg::before{content:"";justify-self:center;width:40px;height:5px;border-radius:3px;background:var(--line)}
+@media (min-width:600px){.dlg-back{align-items:center}.dlg{border-radius:24px;padding-top:20px}.dlg::before{display:none}}
+.dlg h2{font-size:20px}
+.field{display:grid;gap:6px}
+.field label{font-size:14px;font-weight:700;color:var(--muted)}
+.field input,.field textarea{min-height:52px;border-radius:14px;border:1.5px solid transparent;background:var(--paper);padding:0 16px;font-size:17px;transition:border-color .2s,background-color .2s}
+.field input:focus,.field textarea:focus{outline:0;border-color:color-mix(in srgb,var(--accent) 50%,transparent);background:var(--card)}
+.field textarea{padding:12px 16px;min-height:90px;resize:vertical}
+.field input.big{font-size:28px;font-weight:700;font-variant-numeric:tabular-nums;min-height:62px}
+.dlg .actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.dlg .actions .wide{grid-column:1/-1}
+.toast{position:fixed;left:50%;bottom:calc(104px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:12px 18px;border-radius:14px;font-weight:500;z-index:60;max-width:90%;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.18);animation:toastIn .25s var(--ease)}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes fadeUp{from{opacity:.4;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes sheetUp{from{transform:translateY(40px);opacity:.6}to{transform:none;opacity:1}}
+@keyframes toastIn{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translateX(-50%)}}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<main class="wrap" id="app">
+  <div class="top"><h1>현장 실측 사진첩</h1></div>
+  <p class="notice" id="boot">저장소에 연결하는 중이에요…</p>
+</main>
+
+<input type="file" id="fileCam" accept="image/*" capture="environment" hidden>
+<input type="file" id="fileAlbum" accept="image/*" multiple hidden>
+<input type="file" id="fileZip" accept=".zip,application/zip,application/x-zip-compressed" hidden>
+
+<section id="editor" hidden aria-label="사진 편집">
+  <div class="ed-top">
+    <button class="btn small" id="edClose" type="button">닫기</button>
+    <select id="edSpace" aria-label="공간"></select>
+    <span id="edState" style="font-size:12px;color:#bcaa98;white-space:nowrap"></span>
+    <button class="btn small" id="edDel" type="button" aria-label="사진 메뉴">⋯</button>
+  </div>
+  <div id="edStage"><canvas id="cv"></canvas><canvas id="loupe" width="264" height="264"></canvas></div>
+  <div class="hint" id="edHint"></div>
+  <div class="ed-tools" id="edTools"></div>
+  <div class="ed-bottom"><textarea id="edMemo" placeholder="이 사진 메모 (예: 싱크대 벽 배관 돌출 있음)" rows="1"></textarea><button class="btn primary" id="edSave" type="button">완료</button></div>
+</section>
+
+<script>
+(() => {
+"use strict";
+const SPACES = ["거실","주방","안방","작은방1","작은방2","욕실","현관","드레스룸","베란다","기타"];
+/* 공간별 기본 실측 항목. 문자열은 치수로 재는 항목, {c:...}는 사진·눈으로 확인만 하는 항목 */
+const ROOM_ITEMS = ["가로","세로","천장고","창 가로","창 높이","창대 높이","문 가로","문 높이"];
+const CHECKLIST = {
+  "거실": ["가로","세로","천장고","창 가로","창 높이","창대 높이","아트월 벽 길이","우물천장 깊이","걸레받이 높이",{c:"콘센트·스위치 위치 사진"},{c:"에어컨 배관 위치"}],
+  "주방": ["싱크대 벽 길이","ㄱ자 벽 길이","천장고","창 가로","창 높이","창대 높이","배수 중심(벽에서)","급수 높이","가스 위치","후드 배기구 높이","냉장고 자리 폭",{c:"벽 직각·수평 확인"},{c:"콘센트 위치 사진"}],
+  "안방": [...ROOM_ITEMS,"붙박이장 벽 길이",{c:"에어컨 배관·콘센트 위치"}],
+  "작은방1": [...ROOM_ITEMS,"붙박이장 벽 길이",{c:"에어컨 배관·콘센트 위치"}],
+  "작은방2": [...ROOM_ITEMS,"붙박이장 벽 길이",{c:"에어컨 배관·콘센트 위치"}],
+  "욕실": ["가로","세로","천장고(천장재 아래)","문 가로","문 높이","문턱 높이","변기 배수 중심(벽에서)","세면대 배수 높이","샤워 배수 위치","창 가로","창 높이",{c:"환풍기 위치"},{c:"바닥 물매 확인"}],
+  "현관": ["가로","세로","천장고","현관문 가로","현관문 높이","신발장 벽 길이","현관 단차",{c:"중문 설치 공간 확인"}],
+  "드레스룸": ["가로","세로","천장고","문 가로","문 높이","창 가로","창 높이"],
+  "베란다": ["가로","세로","천장고","새시 가로","새시 높이","바닥 단차",{c:"배수구 위치"},{c:"수전 위치"},{c:"확장 여부"}]
+};
+const itemsOf = space => (CHECKLIST[space] || ["가로","세로","천장고"]).map(x => typeof x === "string" ? {n:x, t:"dim"} : {n:x.c, t:"check"});
+const REF_CHIPS = ["내경","외경","마감면 기준","슬라브 기준","중심까지"];
+const INK = "#1b2633";
+const COLORS = ["#ffc800","#ff3b30","#27c4ff","#ffffff",INK];
+const SKETCH = "평면 스케치";
+const SPREAD_WARN = 10;   // 여러 점으로 잰 값의 차이가 이 mm 이상이면 기울어짐 경고
+const CANVAS_FONT = '"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif';
+const HINTS = {
+  dim: "치수선: 재고 싶은 곳을 끝에서 끝까지 그어 주세요. 두 손가락으로 벌리면 확대돼요.",
+  line: "직선: 벽이나 가구 선을 그어요. 수평·수직은 자동으로 맞춰져요. 두 손가락으로 확대할 수 있어요.",
+  text: "글자: 글자를 넣을 곳을 눌러 주세요.",
+  pen: "펜: 자유롭게 표시해 주세요 (동그라미, 화살표 등).",
+  erase: "지우기: 지울 선이나 글자를 눌러 주세요."
+};
+
+/* OFFLINE: 휴대폰에 설치하는 오프라인 앱으로 열렸을 때 (인터넷 없이 동작, 자료는 휴대폰에, '사장님께 보내기' 파일로 전달) */
+const OFFLINE = window.OFFLINE_APP === true;
+const W = OFFLINE ? {
+  need: n => `사장님께 안 보낸 현장 ${n}곳`, done: "모든 현장을 사장님께 보냈어요",
+  needSub: "버튼을 누르면 보낼 파일이 만들어져요. 그 파일을 카톡으로 사장님께 보내 주세요.", doneSub: "새로 찍거나 고치면 여기서 다시 알려 드려요.",
+  all: "보낼 파일 한 번에 만들기", again: "전체 다시 만들기", one: "사장님께 보낼 파일 만들기",
+  step: "사장님께 보내기", stepDone: "보낼 파일을 만들어 두었어요. 카톡으로 보냈는지 확인해 주세요.",
+  stepTodo: "사진·실측표를 파일 하나(ZIP)로 만들어요. 그 파일을 카톡으로 사장님께 보내면 돼요.",
+  pillNeed: "안 보냄", pillNew: "새 사진 안 보냄", pillOk: "보냄"
+} : {
+  need: n => `백업이 필요한 현장 ${n}곳`, done: "모든 현장이 백업돼 있어요",
+  needSub: "버튼 한 번이면 사진과 실측표가 고객별 폴더로 묶여 저장돼요.", doneSub: "새 사진을 찍으면 여기서 다시 알려 드려요.",
+  all: "한 번에 백업", again: "전체 다시 받기", one: "이 현장 백업하기",
+  step: "현장 백업", stepDone: "사진과 실측표를 백업 파일로 받아 두었어요.",
+  stepTodo: "사진·실측표·엑셀을 한 파일(ZIP)로 받아 둡니다.",
+  pillNeed: "백업 필요", pillNew: "새 사진 백업 필요", pillOk: "백업 완료"
+};
+/* 오프라인 앱에서는 파일을 바로 휴대폰 '다운로드' 폴더에 저장한다 */
+const localDownloads = {
+  async save({filename, data}){
+    const url = URL.createObjectURL(data instanceof Blob ? data : new Blob([data]));
+    const a = document.createElement("a"); a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    return {saved: true};
+  }
+};
+let db = null, assets = null, downloads = null;
+/* canDelete: 현장·사진 삭제 버튼은 사장님(주인)에게만 보인다. waitInvite: 로그인은 했지만 아직 저장 권한을 못 받은 직원 */
+let canDelete = true, waitInvite = false;
+let sites = [], photos = [], cur = null, unsubPhotos = null;
+let view = "home", tab = "photos", nextSpace = "거실", query = "", loaded = false;
+const localUrls = new Map();
+let mode = "cloud", showAllSpaces = false, storageUse = 0;
+
+const $ = s => document.querySelector(s);
+const app = $("#app");
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const today = () => { const d = new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); };
+const imgSrc = id => localUrls.get(id) || ("/_blob/" + id);
+
+const ICON = {
+  cam: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a2 2 0 0 1 2-2h2l1.5-2h7L17 6h2a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="13" r="4"/></svg>',
+  album: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/></svg>',
+  back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>',
+  plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+  dim: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18M3 8v8M21 8v8M7 9l-4 3 4 3M17 9l4 3-4 3"/></svg>',
+  text: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 6h14M12 6v13"/></svg>',
+  pen: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l4-1 11-11-3-3L5 16z"/></svg>',
+  erase: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 20h12M5 15l9-9 5 5-8 8H8z"/></svg>',
+  line: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 20L20 4"/></svg>',
+  fit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>',
+  undo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7H4v5"/><path d="M4 12a8 8 0 1 1 2.3 5.7"/></svg>',
+  edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l4-1 11-11-3-3L5 16z"/></svg>'
+};
+
+/* ---------- toast & dialogs ---------- */
+let toastTimer = null;
+function toast(msg, ms = 2600){
+  let t = $(".toast"); if(!t){ t = document.createElement("div"); t.className = "toast"; t.setAttribute("role","status"); document.body.appendChild(t); }
+  t.textContent = msg; clearTimeout(toastTimer);
+  if(ms) toastTimer = setTimeout(() => t.remove(), ms);
+}
+function dialog({title, fields = [], ok = "확인", cancel = "취소", danger = null, text = null}){
+  return new Promise(resolve => {
+    const back = document.createElement("div"); back.className = "dlg-back";
+    const f = fields.map(fd => {
+      const chips = fd.chips ? `<div class="chips">${fd.chips.map(c => `<button type="button" class="chip" data-for="${fd.id}" data-v="${esc(c)}">${esc(c)}</button>`).join("")}</div>` : "";
+      const input = fd.type === "textarea"
+        ? `<textarea id="f_${fd.id}" placeholder="${esc(fd.placeholder||"")}">${esc(fd.value||"")}</textarea>`
+        : `<input id="f_${fd.id}" type="${fd.type||"text"}" ${fd.inputmode?`inputmode="${fd.inputmode}"`:""} class="${fd.big?"big":""}" value="${esc(fd.value||"")}" placeholder="${esc(fd.placeholder||"")}" autocomplete="off">`;
+      return `<div class="field"><label for="f_${fd.id}">${esc(fd.label)}</label>${input}${chips}</div>`;
+    }).join("");
+    back.innerHTML = `<form class="dlg" role="dialog" aria-modal="true" aria-label="${esc(title)}">
+      <h2>${esc(title)}</h2>${text?`<p style="margin:0">${text}</p>`:""}${f}
+      <div class="actions">
+        ${cancel?`<button type="button" class="btn" data-a="cancel">${esc(cancel)}</button>`:""}
+        <button type="submit" class="btn primary ${cancel?"":"wide"}">${esc(ok)}</button>
+        ${danger?`<button type="button" class="btn danger wide" data-a="danger">${esc(danger)}</button>`:""}
+      </div></form>`;
+    document.body.appendChild(back);
+    const form = back.querySelector("form");
+    const done = v => { back.remove(); resolve(v); };
+    form.addEventListener("submit", e => { e.preventDefault();
+      const out = {}; fields.forEach(fd => out[fd.id] = form.querySelector("#f_"+fd.id).value.trim());
+      done(out); });
+    back.addEventListener("click", e => {
+      const a = e.target.closest("[data-a]"); if(a) return done(a.dataset.a === "danger" ? "danger" : null);
+      const c = e.target.closest(".chip[data-for]"); if(c){ const inp = form.querySelector("#f_"+c.dataset.for); inp.value = c.dataset.v; inp.focus(); }
+      if(e.target === back) done(null);
+    });
+    const first = form.querySelector("input,textarea"); if(first) setTimeout(() => { first.focus(); if(first.select) first.select(); }, 60);
+  });
+}
+const confirmBox = (title, text, ok = "삭제") => dialog({title, text: esc(text), ok}).then(v => v !== null);
+
+/* ---------- boot ---------- */
+/* 휴대폰 앱에서는 window.claude가 페이지 스크립트보다 늦게 붙을 수 있어서, 바로 포기하지 않고 기다린다 */
+function waitForClaude(ms){
+  return new Promise(res => {
+    if(window.claude && window.claude.use) return res(window.claude);
+    const t0 = Date.now();
+    const iv = setInterval(() => {
+      if(window.claude && window.claude.use){ clearInterval(iv); res(window.claude); }
+      else if(Date.now() - t0 > ms){ clearInterval(iv); res(null); }
+    }, 150);
+  });
+}
+/* ---------- 휴대폰 저장 (클라우드 저장소를 못 쓸 때 IndexedDB에 같은 모양으로 저장) ---------- */
+let idb = null, localDb = null, pendingLocal = null;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+function idbReq(r){ return new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
+const idbStore = (name, m) => idb.transaction(name, m).objectStore(name);
+async function idbWrite(name, fn){
+  try{
+    const t = idb.transaction(name, "readwrite"); fn(t.objectStore(name));
+    await new Promise((res, rej) => { t.oncomplete = () => res(); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error); });
+  }catch(e){ throw {code: e && e.name === "QuotaExceededError" ? "quota_exceeded" : "local_error", message: String(e && e.message || e)}; }
+}
+const localBlob = id => idbReq(idbStore("blobs", "readonly").get(id)).catch(() => null);
+async function openLocal(loadBlobs){
+  if(!window.indexedDB) return null;
+  idb = await new Promise((res, rej) => {
+    const r = indexedDB.open("silcheuk-sajincheop", 1);
+    r.onupgradeneeded = () => { const d = r.result; d.createObjectStore("docs", {keyPath:"path"}); d.createObjectStore("blobs"); };
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); r.onblocked = () => rej(new Error("blocked"));
+  });
+  const rows = await idbReq(idbStore("docs", "readonly").getAll());
+  const cache = new Map(rows.map(r => [r.path, r.data]));
+  if(loadBlobs){
+    await new Promise((res, rej) => {
+      const c = idbStore("blobs", "readonly").openCursor();
+      c.onsuccess = () => { const k = c.result; if(!k) return res(); localUrls.set(k.key, URL.createObjectURL(k.value)); k.continue(); };
+      c.onerror = () => rej(c.error);
+    });
+  }
+  return makeLocalDb(cache);
+}
+function makeLocalDb(cache){
+  const subs = new Set(), meta = {fromCache:false, hasPendingWrites:false};
+  const colOf = p => p.slice(0, p.lastIndexOf("/")), idOf = p => p.slice(p.lastIndexOf("/") + 1);
+  const snapDoc = p => ({id:idOf(p), exists:cache.has(p), data:() => cache.get(p), metadata:meta});
+  const val = v => v == null ? -Infinity : v;
+  const clone = d => JSON.parse(JSON.stringify(d));
+  function run(q){
+    let docs = [...cache.keys()].filter(p => colOf(p) === q.col).map(snapDoc);
+    for(const [f, op, v] of q.wh) docs = docs.filter(d => { const x = d.data()[f]; return op === "==" ? x === v : op === "!=" ? x !== v : true; });
+    if(q.ord){ const [f, dir] = q.ord, k = dir === "desc" ? -1 : 1; docs.sort((a, b) => { const x = val(a.data()[f]), y = val(b.data()[f]); return (x > y ? 1 : x < y ? -1 : 0) * k; }); }
+    return {docs, size:docs.length, empty:!docs.length, metadata:meta, docChanges:() => []};
+  }
+  const notify = col => { for(const s of subs) if(s.q.col === col) setTimeout(() => s.next(run(s.q)), 0); };
+  function docRef(p){
+    return {id:idOf(p), path:p,
+      get: async () => snapDoc(p),
+      set: async data => { const d = clone(data); await idbWrite("docs", s => s.put({path:p, data:d})); cache.set(p, d); notify(colOf(p)); },
+      update: async data => {
+        if(!cache.has(p)) throw {code:"invalid_argument", message:"missing"};
+        const d = {...cache.get(p), ...clone(data)};
+        await idbWrite("docs", s => s.put({path:p, data:d})); cache.set(p, d); notify(colOf(p));
+      },
+      delete: async () => { await idbWrite("docs", s => s.delete(p)); cache.delete(p); notify(colOf(p)); },
+      collection: c => query({col:p + "/" + c, wh:[], ord:null})
+    };
+  }
+  function query(q){
+    return {path:q.col,
+      where: (f, op, v) => query({...q, wh:[...q.wh, [f, op, v]]}),
+      orderBy: (f, dir = "asc") => query({...q, ord:[f, dir]}),
+      limit: () => query(q),
+      get: async () => run(q),
+      onSnapshot: next => { const s = {q, next}; subs.add(s); setTimeout(() => next(run(q)), 0); return () => subs.delete(s); },
+      doc: id => docRef(q.col + "/" + (id || newId())),
+      add: async data => { const r = docRef(q.col + "/" + newId()); await r.set(data); return r; }
+    };
+  }
+  return {doc:docRef, collection:c => query({col:c, wh:[], ord:null}), cache};
+}
+const localAssets = {
+  async upload(blob){
+    const id = "local_" + newId();
+    await idbWrite("blobs", s => s.put(blob, id));
+    const url = URL.createObjectURL(blob); localUrls.set(id, url);
+    return {id, url, sizeBytes:blob.size, contentType:blob.type || "image/jpeg"};
+  },
+  async delete(id){
+    await idbWrite("blobs", s => s.delete(id));
+    const u = localUrls.get(id); if(u){ URL.revokeObjectURL(u); localUrls.delete(id); }
+    return {deleted:true};
+  },
+  async list(){ return {assets:[], usage:{files:0, bytes:0, maxFiles:0, maxBytes:0}}; }
+};
+function countLocal(){
+  if(!localDb) return null;
+  const keys = [...localDb.cache.keys()];
+  const s = keys.filter(p => /^sites\/[^/]+$/.test(p)).length, ph = keys.filter(p => /^photos\/[^/]+$/.test(p)).length;
+  return s || ph ? {sites:s, photos:ph} : null;
+}
+/* 클라우드에 연결된 기기에서: 휴대폰 저장분을 같은 id로 옮기고 지운다 */
+async function syncLocal(){
+  const btn = $("#syncBtn"); if(btn) btn.disabled = true;
+  try{
+    const all = [...localDb.cache.entries()];
+    const siteRows = all.filter(([p]) => /^sites\/[^/]+$/.test(p)), photoRows = all.filter(([p]) => /^photos\/[^/]+$/.test(p));
+    for(const [p, d] of siteRows) await db.doc(p).set(d);
+    for(let i = 0; i < photoRows.length; i++){
+      const [p, d] = photoRows[i], nd = {...d};
+      toast(`휴대폰 사진 올리는 중 ${i+1}/${photoRows.length}`, 0);
+      for(const k of ["assetId", "annotatedId", "thumbId"]){
+        const id = d[k]; if(!id || !String(id).startsWith("local_")) continue;
+        const b = await localBlob(id);
+        nd[k] = b ? (await assets.upload(b, {type:"image/jpeg"})).id : (k === "assetId" ? id : null);
+      }
+      await db.doc(p).set(nd);
+      await localDb.doc(p).delete();
+      for(const k of ["assetId", "annotatedId", "thumbId"]) if(d[k] && String(d[k]).startsWith("local_")) await idbWrite("blobs", s => s.delete(d[k])).catch(() => {});
+    }
+    for(const [p] of siteRows) await localDb.doc(p).delete();
+    pendingLocal = null; toast("휴대폰에 있던 현장을 모두 올렸어요", 3500); renderHome();
+  }catch(e){ toast(writeErr(e), 4000); if(btn) btn.disabled = false; }
+}
+
+async function boot(){
+  setBoot("저장소에 연결하는 중이에요…");
+  let wasLocal = false; try{ wasLocal = localStorage.getItem("sajincheop-mode") === "local"; }catch(_){}
+  const C = OFFLINE ? null : await waitForClaude(wasLocal ? 3000 : 8000);
+  if(C){
+    try { db = await C.use("db"); } catch(e){ db = null; }
+    if(!db && !wasLocal){ await sleep(1500); try { db = await C.use("db"); } catch(e){ db = null; } }
+    let me = null; try { me = await C.use("user"); } catch(e){ me = null; }
+    if(db && me){
+      // 초대를 아직 못 받은 직원: 저장이 거절되니 휴대폰 저장 모드로 일하고, 초대받은 뒤 올린다
+      let w = null; try { w = await me.can("data.write"); } catch(_){ w = null; }
+      if(w === false){ db = null; waitInvite = true; }
+    }
+    if(db){ try { assets = await C.use("assets"); } catch(e){ assets = null; } }
+    try { downloads = await C.use("downloads"); } catch(e){ downloads = null; }
+    if(db && me){ try { canDelete = !!(await me.isOwner()); } catch(_){ canDelete = true; } }
+  }
+  if(db){
+    mode = "cloud"; try{ localStorage.setItem("sajincheop-mode", "cloud"); }catch(_){}
+    try{ localDb = await openLocal(false); }catch(_){ localDb = null; }
+    pendingLocal = countLocal();
+  } else {
+    try{ localDb = await openLocal(true); }catch(_){ localDb = null; }
+    if(!localDb){ fail("이 휴대폰에서는 사진을 저장할 수 없어요. 브라우저나 앱 설정에서 사이트 데이터 저장이 막혀 있는지 확인해 주세요.", true); return; }
+    mode = "local"; db = localDb; assets = localAssets;
+    if(OFFLINE) downloads = localDownloads;
+    try{ localStorage.setItem("sajincheop-mode", "local"); }catch(_){}
+    try{ if(navigator.storage && navigator.storage.persist) navigator.storage.persist(); }catch(_){}
+    try{ if(navigator.storage && navigator.storage.estimate) navigator.storage.estimate().then(e => { storageUse = e.usage || 0; if(view === "home") renderHome(); }).catch(() => {}); }catch(_){}
+  }
+  const slow = setTimeout(() => { if(!loaded) setBoot("저장소 연결이 늦어지고 있어요. 인터넷 연결을 확인해 주세요. 연결되면 자동으로 열려요."); }, 10000);
+  db.collection("sites").orderBy("updatedAt","desc").onSnapshot(snap => {
+    sites = snap.docs.map(d => ({id: d.id, ...d.data()}));
+    if(!snap.metadata.fromCache){ loaded = true; clearTimeout(slow); }
+    if(cur){ const s = sites.find(x => x.id === cur.id); if(s) cur = s; }
+    loaded = loaded || snap.size > 0;
+    render();
+  }, err => { clearTimeout(slow); fail("현장 목록을 불러오지 못했어요 ("+esc(err.code)+"). 페이지를 다시 열어 주세요."); });
+}
+function setBoot(msg){ const b = $("#boot"); if(b) b.textContent = msg; }
+const PAGE_LINK = "https://claude.ai/artifact/61sTGBPLg5UkU7Upmo3W7f";
+function fail(msg, help){
+  app.innerHTML = `<div class="top"><h1>현장 실측 사진첩</h1></div>
+  <div class="stack" style="margin-top:12px">
+    <p class="notice err" style="margin:0">${msg}</p>
+    ${help ? `
+    <button class="btn primary" id="retry" type="button">다시 연결하기</button>
+    <div class="notice stack" style="background:var(--card);box-shadow:var(--shadow)">
+      <b>그래도 안 되면 이렇게 해 보세요</b>
+      <ol class="steps">
+        <li><span>Claude 앱을 완전히 닫았다가 다시 열고, 최신 버전으로 업데이트해 주세요.</span></li>
+        <li><span>휴대폰의 <b>크롬</b>이나 <b>사파리</b>에서 claude.ai에 로그인한 뒤 아래 주소를 열어 주세요.</span></li>
+      </ol>
+      <div class="row"><input class="search" id="pageLink" readonly value="${PAGE_LINK}" style="flex:1;min-width:0"><button class="btn small" id="copyLink" type="button">주소 복사</button></div>
+      <span class="sub">홈 화면에 추가해 두면 다음부터 앱처럼 바로 열 수 있어요.</span>
+    </div>` : ""}
+  </div>`;
+  if(!help) return;
+  $("#retry").onclick = () => { app.innerHTML = `<div class="top"><h1>현장 실측 사진첩</h1></div><p class="notice" id="boot">저장소에 연결하는 중이에요…</p>`; boot(); };
+  $("#copyLink").onclick = async () => {
+    try{ await navigator.clipboard.writeText(PAGE_LINK); toast("주소를 복사했어요"); }
+    catch(e){ const i = $("#pageLink"); i.focus(); i.select(); toast("주소를 길게 눌러 복사해 주세요"); }
+  };
+}
+
+/* ---------- render ---------- */
+function render(){
+  if(view === "site" && cur) renderSite(); else renderHome();
+}
+function renderHome(){
+  view = "home";
+  const q = query.toLowerCase();
+  const list = sites.filter(s => !q || (s.name+" "+(s.address||"")+" "+(s.phone||"")).toLowerCase().includes(q));
+  app.innerHTML = `
+  <div class="top"><h1>현장 실측 사진첩</h1></div>
+  <div class="stack" style="margin-top:12px">
+    <button class="btn primary" id="newSite" type="button" style="min-height:56px;font-size:17px">${ICON.plus} 새 현장 추가</button>
+    ${!assets ? `<p class="notice">아직 사진을 올릴 권한이 없어요. 사장님께 이 사진첩에 <b>초대</b>해 달라고 말씀해 주세요. 지금은 보기만 가능해요.</p>`:""}
+    ${waitInvite ? `<p class="notice" style="margin:0"><b>아직 사장님 사진첩에 초대되지 않았어요</b><br>그동안은 이 휴대폰에 저장돼요. 초대를 받은 뒤 다시 열면 <b>올리기</b> 버튼이 나와서 사장님 사진첩으로 옮길 수 있어요.</p>` : ""}
+    ${OFFLINE ? `<p class="notice" style="margin:0;background:var(--accent-soft)"><b>인터넷 없이도 쓸 수 있어요</b><br>찍은 사진과 치수는 이 휴대폰에 저장돼요. 현장이 끝나면 <b>사장님께 보내기</b>를 꼭 해 주세요.${storageUse ? `<br><span class="sub">이 앱이 휴대폰에서 쓰는 공간: 약 ${Math.max(1, Math.round(storageUse / 1048576))}MB</span>` : ""}</p>` : ""}
+    ${mode === "local" && !OFFLINE ? `<p class="notice" style="margin:0"><b>휴대폰 저장 모드</b><br>지금은 이 휴대폰 안에만 저장돼요. Claude 앱을 지우거나 앱 데이터를 지우면 사진도 같이 사라져요. 현장이 끝나면 <b>현장 마무리</b>로 사진첩에 옮겨 두세요.${storageUse ? `<br><span class="sub">이 툴이 휴대폰에서 쓰는 공간: 약 ${Math.max(1, Math.round(storageUse / 1048576))}MB</span>` : ""}</p>` : ""}
+    ${mode === "cloud" && pendingLocal && assets ? `<div class="backup due"><div><b>이 기기에만 있는 현장 ${pendingLocal.sites}곳 · 사진 ${pendingLocal.photos}장</b>
+      <div class="sub">클라우드 저장소로 올려 두면 다른 기기에서도 보고, Claude가 정리할 수 있어요.</div></div>
+      <button class="btn primary" id="syncBtn" type="button">올리기</button></div>` : ""}
+    ${mode === "cloud" && assets && window.JSZip ? `<button class="btn" id="importBtn" type="button">직원이 보낸 파일 가져오기 <span class="sub" style="font-weight:400">(ZIP)</span></button>` : ""}
+    ${sites.length && downloads && window.JSZip ? (() => { const n = sites.filter(needsBackup).length; return `
+      <div class="backup ${n?"due":""}">
+        <div><b>${n ? W.need(n) : W.done}</b>
+        <div class="sub">${n ? W.needSub : W.doneSub}</div></div>
+        ${n ? `<button class="btn primary" id="backupBtn" type="button">${W.all}</button>` : `<button class="btn small" id="backupAllBtn" type="button">${W.again}</button>`}
+      </div>`; })() : ""}
+    ${sites.length ? `<input class="search" id="q" type="search" placeholder="고객 이름이나 주소로 찾기" value="${esc(query)}">` : ""}
+    ${sites.length ? `<div class="list">${list.map(s => `
+      <button class="site" type="button" data-site="${esc(s.id)}">
+        <b>${esc(s.name)}</b><span class="date">${esc(s.date||"")}</span>
+        <span class="sub">${esc(s.address||"주소 없음")}</span>
+        ${s.finishedAt || downloads ? `<span style="grid-column:1;display:flex;gap:6px;flex-wrap:wrap">${finishPill(s)}${downloads ? backupLabel(s) : ""}</span>` : ""}
+      </button>`).join("") || `<p class="empty">찾는 현장이 없어요.</p>`}</div>`
+    : `<div class="notice stack" style="background:var(--card);box-shadow:var(--shadow)">
+        <h2 style="font-size:18px">이렇게 쓰시면 돼요</h2>
+        <ol class="steps">
+          <li><span><b>새 현장 추가</b>를 눌러 고객 이름과 주소를 적어요.</span></li>
+          <li><span>공간(거실·주방…)을 고르고 <b>사진 찍기</b>를 눌러요.</span></li>
+          <li><span>찍은 사진 위에 손가락으로 선을 긋고 <b>치수</b>를 적어요.</span></li>
+          <li><span><b>실측표</b> 탭에 치수가 공간별로 자동 정리돼요.</span></li>
+        </ol>
+      </div>`}
+    ${mode === "cloud" ? `<p class="claude"><b>Claude에게 맡기기</b><br>사무실에서 Claude 채팅창에 <b>"실측 사진첩에서 ○○○ 고객 정리해줘"</b>라고 쓰시면, 여기 저장된 치수와 메모로 도면·상담자료를 만들어 드려요.</p>` : ""}
+  </div>`;
+  $("#newSite").onclick = newSite;
+  const sy = $("#syncBtn"); if(sy) sy.onclick = syncLocal;
+  const ib = $("#importBtn"); if(ib) ib.onclick = () => $("#fileZip").click();
+  const bb = $("#backupBtn"); if(bb) bb.onclick = () => backupAll(true);
+  const ba = $("#backupAllBtn"); if(ba) ba.onclick = () => backupAll(false);
+  const qi = $("#q"); if(qi) qi.oninput = e => { query = e.target.value; const pos = e.target.selectionStart; renderHome(); const n = $("#q"); n.focus(); n.setSelectionRange(pos,pos); };
+  app.querySelectorAll("[data-site]").forEach(b => b.onclick = () => openSite(b.dataset.site));
+}
+
+function spacesOf(site){ return [...SPACES.filter(s => s !== "기타"), ...(site.customSpaces||[]), "기타"]; }
+function ordered(){ return [...photos].sort((a,b) => (a.createdAt||0) - (b.createdAt||0)); }
+/* 사진 번호는 찍을 때 한 번 정하고 바꾸지 않는다 (지워도 다른 사진 번호가 밀리지 않게) */
+function numberOf(id){ const p = photos.find(x => x.id === id); return (p && p.no) || ordered().findIndex(x => x.id === id) + 1; }
+const nextNo = () => Math.max(photos.length, ...photos.map(p => p.no || 0)) + 1;
+let numbering = false;
+async function migrateNumbers(siteId){
+  if(numbering || !photos.some(p => !p.no)) return;
+  numbering = true;
+  try{
+    let n = Math.max(0, ...photos.map(p => p.no || 0));
+    for(const p of ordered()) if(!p.no && cur && cur.id === siteId){ n++; await db.doc("photos/" + p.id).update({no: n}); }
+  }catch(_){}
+  numbering = false;
+}
+/* 휴대폰 저장 모드: 사진첩에 아직 안 옮긴 사진 (찍거나 고친 뒤로 사진첩 저장을 안 한 것) */
+const unsavedPhotos = () => mode === "local" && !OFFLINE && cur ? photos.filter(p => (p.updatedAt || p.createdAt || 0) > (cur.galleryAt || 0)) : [];
+function dimsOf(p){ return (p.ann||[]).filter(a => a.t === "dim"); }
+
+function renderSite(){
+  const s = cur, sp = spacesOf(s), all = ordered();
+  const count = n => all.filter(p => p.space === n).length;
+  const groups = [...sp, ...[...new Set(all.map(p => p.space))].filter(x => !sp.includes(x))]
+    .map(n => ({n, items: all.filter(p => p.space === n)})).filter(g => g.items.length);
+  app.innerHTML = `
+  <div class="top">
+    <button class="icon-btn" id="back" type="button" aria-label="현장 목록으로">${ICON.back}</button>
+    <div style="flex:1;min-width:0"><h1 style="font-size:20px">${esc(s.name)}</h1>
+      <div class="sub">${esc(s.address||"주소 없음")}${s.date?" · 실측 "+esc(s.date):""}${s.phone?" · "+esc(s.phone):""}</div></div>
+    <button class="icon-btn" id="editSite" type="button" aria-label="현장 정보 고치기">${ICON.edit}</button>
+  </div>
+  <div class="stack" style="margin-top:14px">
+    ${s.memo?`<p class="notice" style="margin:0;white-space:pre-wrap">${esc(s.memo)}</p>`:""}
+    ${unsavedPhotos().length ? `<div class="backup due"><div><b>사진첩에 안 옮긴 사진 ${unsavedPhotos().length}장</b>
+      <div class="sub">이 사진들은 아직 이 툴 안에만 있어요. 앱 데이터가 지워지면 같이 없어져요.</div></div>
+      <button class="btn primary" id="toGallery" type="button">사진첩에 저장</button></div>` : ""}
+    <div class="stack" style="gap:6px">
+      <span class="label">다음에 찍을 사진의 공간</span>
+      <div class="chips" id="spaceChips">
+        ${sp.map(n => `<button type="button" class="chip" data-space="${esc(n)}"${(s.customSpaces||[]).includes(n) ? ` data-custom="1"` : ""} aria-pressed="${n===nextSpace}">${esc(n)}${count(n)?`<span class="n">${count(n)}</span>`:""}</button>`).join("")}
+        <button type="button" class="chip" id="addSpace">+ 직접 입력</button>
+      </div>
+      ${(s.customSpaces||[]).length ? `<span class="sub" style="font-size:13px">직접 만든 공간(${esc(s.customSpaces.join(", "))})은 길게 누르면 지울 수 있어요.</span>` : ""}
+    </div>
+    <button class="btn" id="finishBtn" type="button" style="min-height:52px">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>
+      현장 마무리${finishDone() ? ` <span class="pill ok">완료 ${mdOf(cur.finishedAt)}</span>` : ""}
+    </button>
+    <div class="tabs" role="tablist">
+      <button type="button" role="tab" aria-selected="${tab==="photos"}" data-tab="photos">사진 ${all.length}장</button>
+      <button type="button" role="tab" aria-selected="${tab==="check"}" data-tab="check">체크리스트${missingCount() ? `<span class="miss">${missingCount()}</span>` : ""}</button>
+      <button type="button" role="tab" aria-selected="${tab==="table"}" data-tab="table">실측표</button>
+    </div>
+    <div id="tabBody" class="stack"></div>
+    ${canDelete ? `<button class="btn danger" id="delSite" type="button" style="margin-top:12px">${OFFLINE && !needsBackup(s) ? "보낸 현장 이 휴대폰에서 지우기" : "이 현장 삭제"}</button>` : ""}
+  </div>
+  ${assets ? `<div class="bar"><div class="in">
+    <button class="btn primary" id="shoot" type="button">${ICON.cam} ${esc(nextSpace)} 사진 찍기</button>
+    <button class="btn" id="album" type="button" aria-label="앨범에서 고르기">${ICON.album} 앨범</button>
+  </div></div>`:""}`;
+  $("#back").onclick = leaveSite;
+  $("#editSite").onclick = editSite;
+  $("#finishBtn").onclick = openFinish;
+  const tg = $("#toGallery"); if(tg) tg.onclick = () => showGallery(true);
+  app.querySelectorAll("[data-space]").forEach(b => b.onclick = () => { nextSpace = b.dataset.space; renderSite(); });
+  // 직접 만든 공간: 길게 누르면(0.6초) 지우기 창
+  app.querySelectorAll("[data-custom]").forEach(b => {
+    let t = null, fired = false;
+    b.addEventListener("pointerdown", () => { fired = false; clearTimeout(t); t = setTimeout(() => { fired = true; removeSpace(b.dataset.space); }, 600); });
+    ["pointerup", "pointerleave", "pointercancel"].forEach(ev => b.addEventListener(ev, () => clearTimeout(t)));
+    b.addEventListener("contextmenu", e => e.preventDefault());
+    b.addEventListener("click", e => { if(fired){ e.stopImmediatePropagation(); e.preventDefault(); fired = false; } }, true);
+  });
+  $("#addSpace").onclick = addSpace;
+  const ds = $("#delSite"); if(ds) ds.onclick = deleteSite;
+  app.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => { tab = b.dataset.tab; renderSite(); });
+  if(assets){ $("#shoot").onclick = () => $("#fileCam").click(); $("#album").onclick = () => $("#fileAlbum").click(); }
+  const body = $("#tabBody");
+  if(tab === "photos"){
+    body.innerHTML = (assets ? `<button class="btn" id="addSketch" type="button">${ICON.line} 평면 스케치 추가 <span class="sub" style="font-weight:400">모눈종이에 평면을 그려요</span></button>` : "") +
+      (groups.length ? groups.map(g => `
+      <section class="group"><h3>${esc(g.n)} <span class="sub">${g.items.length}장</span></h3>
+      <div class="grid">${g.items.map(p => `
+        <button type="button" class="thumb" data-photo="${esc(p.id)}" aria-label="사진 ${numberOf(p.id)} 열기">
+          <img loading="lazy" alt="" src="${esc(imgSrc(p.annotatedStale ? p.assetId : (p.thumbId || p.annotatedId || p.assetId)))}">
+          <span class="no">${numberOf(p.id)}</span>${dimsOf(p).length?`<span class="dims">치수 ${dimsOf(p).length}</span>`:""}
+        </button>`).join("")}</div></section>`).join("")
+      : `<p class="empty">아직 사진이 없어요.<br>아래 <b>사진 찍기</b>를 눌러 시작하세요.</p>`);
+    body.querySelectorAll("[data-photo]").forEach(b => b.onclick = () => { const p = photos.find(x => x.id === b.dataset.photo); if(p) openEditor(p); });
+    const sk = $("#addSketch"); if(sk) sk.onclick = addSketch;
+  } else if(tab === "check"){
+    body.innerHTML = checklistHtml();
+    bindChecklist(body);
+  } else {
+    body.innerHTML = tableHtml(groups) + `
+      <div class="row">
+        <button class="btn" id="copyTxt" type="button">글자로 복사</button>
+        <button class="btn" id="gallery" type="button">사진 갤러리에 저장</button>
+        ${downloads && window.XLSX ? `<button class="btn" id="xlsx" type="button">엑셀 파일 저장</button>` : `<button class="btn" id="tsv" type="button">엑셀에 붙여넣기 복사</button>`}
+        ${downloads && window.JSZip ? `<button class="btn" id="zip" type="button">${W.one}</button>`:""}
+      </div>
+      <p class="sub" style="margin:0">치수 단위는 mm예요. 치수는 사진 위에 그은 선에서 자동으로 모여요.</p>`;
+    $("#copyTxt").onclick = copyText;
+    $("#gallery").onclick = () => showGallery(false);
+    const xb = $("#xlsx"); if(xb) xb.onclick = saveXlsx;
+    const tb = $("#tsv"); if(tb) tb.onclick = copyTsv;
+    const z = $("#zip"); if(z) z.onclick = downloadZip;
+    body.querySelectorAll("[data-photo]").forEach(b => b.onclick = () => { const p = photos.find(x => x.id === b.dataset.photo); if(p) openEditor(p); });
+  }
+  if(finishOv) renderFinish();
+}
+
+/* ---------- 현장 마무리: 빠진 항목 → 사진 지키기 → 실측표 보내기 → 마무리 기록 ---------- */
+let finishOv = null, finishSent = {text:false, excel:false}, afterGallery = null;
+const mdOf = t => { const d = new Date(t); return (d.getMonth()+1) + "/" + d.getDate(); };
+const finishDone = () => !!(cur && cur.finishedAt && cur.finishedAt >= (cur.updatedAt || 0));
+function finishPill(s){
+  if(!s.finishedAt) return "";
+  return (s.updatedAt || 0) > s.finishedAt ? `<span class="pill warn">마무리 후 수정됨</span>` : `<span class="pill ok">마무리 ${mdOf(s.finishedAt)}</span>`;
+}
+function openFinish(){
+  finishSent = {text:false, excel:false};
+  if(!finishOv){
+    finishOv = document.createElement("div");
+    finishOv.style.cssText = "position:fixed;inset:0;z-index:28;background:var(--paper);overflow:auto;padding:max(12px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(24px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))";
+    finishOv.setAttribute("role", "dialog"); finishOv.setAttribute("aria-label", "현장 마무리");
+    document.body.appendChild(finishOv);
+  }
+  renderFinish();
+}
+function closeFinish(){
+  if(finishOv){ finishOv.remove(); finishOv = null; }
+  document.body.classList.remove("noscroll");
+  if(view === "site" && cur) renderSite();
+}
+function renderFinish(){
+  if(!finishOv || !cur) return;
+  document.body.classList.add("noscroll");
+  const spaces = checkSpaces().filter(s => photos.some(p => p.space === s));
+  const missing = spaces.map(s => ({s, items: checkStatus(s).filter(x => x.state === "todo")})).filter(x => x.items.length);
+  const mCount = missing.reduce((n, x) => n + x.items.length, 0);
+  const unsaved = unsavedPhotos().length;
+  const step = (n, title, ok, body) => `<section class="fin ${ok ? "ok" : ""}">
+    <div class="fin-h"><span class="fin-n">${ok ? "✓" : n}</span><b>${title}</b><span class="pill ${ok ? "ok" : "warn"}">${ok ? "완료" : "할 일"}</span></div>${body}</section>`;
+
+  const s1 = step(1, "빠진 항목 확인", mCount === 0, mCount
+    ? `<div class="miss-list">${missing.map(x => `<span><b>${esc(x.s)}</b> ${esc(x.items.map(i => i.n).join(", "))}</span>`).join("")}</div>
+       <p class="sub" style="margin:0">현장을 떠나면 다시 잴 수 없어요. 잴 필요가 없는 항목은 체크리스트에서 '해당 없음'으로 바꾸세요.</p>
+       <button class="btn" type="button" data-f="check">체크리스트 열기 (빠짐 ${mCount})</button>`
+    : `<p class="sub" style="margin:0">${photos.length ? "사진 찍은 공간의 항목을 모두 쟀거나 '해당 없음'으로 표시했어요." : "아직 찍은 사진이 없어요."}</p>`)
+    + (() => {
+      const tilted = photos.flatMap(p => dimsOf(p).filter(a => spreadOf(a) >= SPREAD_WARN).map(a => `${esc(p.space)} ${esc(a.label || "치수")} (차 ${spreadOf(a)}mm)`));
+      return tilted.length ? `<p class="notice" style="margin:0;font-size:14px"><b>기울어짐 주의</b> ${tilted.join(", ")}<br>붙박이 가구는 가장 작은 값으로 제작하고, 시공팀에 꼭 알려 주세요.</p>` : "";
+    })();
+
+  let s2;
+  if(mode === "local" && !OFFLINE){
+    s2 = step(2, "사진첩에 사진 저장", unsaved === 0, unsaved
+      ? `<p class="sub" style="margin:0">사진 ${unsaved}장이 아직 이 툴 안에만 있어요. 앱 데이터가 지워지면 같이 없어져요.</p>
+         <button class="btn primary" type="button" data-f="gallery">안 옮긴 사진 ${unsaved}장 저장하기</button>`
+      : `<p class="sub" style="margin:0">모든 사진을 휴대폰 사진첩에 옮겼어요.</p>`);
+  } else if(downloads && window.JSZip){
+    const ok = !needsBackup(cur);
+    s2 = step(2, W.step, ok, ok ? `<p class="sub" style="margin:0">${W.stepDone}</p>`
+      : `<p class="sub" style="margin:0">${W.stepTodo}</p><button class="btn primary" type="button" data-f="zip">${W.one}</button>`);
+  } else {
+    s2 = step(2, "사진 보관", true, `<p class="sub" style="margin:0">사진은 클라우드 저장소에 보관돼 있어요.</p>`);
+  }
+
+  const sent = finishSent.text || finishSent.excel;
+  const s3 = step(3, "실측표 보내기", sent, `
+    <p class="sub" style="margin:0">복사한 뒤 카카오톡이나 카카오워크 대화방을 열어 붙여넣기 하세요. 사무실에서 상담자료를 만들 때 그대로 쓸 수 있어요.</p>
+    <div class="row">
+      <button class="btn ${finishSent.text ? "" : "primary"}" type="button" data-f="text">${finishSent.text ? "다시 복사" : "카톡용 글자 복사"}</button>
+      ${downloads && window.XLSX ? `<button class="btn" type="button" data-f="xlsx">${finishSent.excel ? "엑셀 다시 저장" : "엑셀 파일 저장"}</button>`
+        : `<button class="btn" type="button" data-f="tsv">${finishSent.excel ? "다시 복사" : "엑셀에 붙여넣기 복사"}</button>`}
+    </div>`);
+
+  const allOk = mCount === 0 && (mode !== "local" || unsaved === 0) && sent;
+  finishOv.innerHTML = `
+    <div class="top" style="padding-top:0"><h1 style="font-size:20px">현장 마무리</h1><button class="btn small" type="button" data-f="close">닫기</button></div>
+    <p class="sub" style="margin:4px 0 12px">${esc(cur.name)} · ${esc(cur.address || "주소 없음")} · 사진 ${photos.length}장</p>
+    <div class="stack">
+      ${s1}${s2}${s3}
+      <button class="btn ${allOk ? "primary" : ""}" type="button" data-f="done" style="min-height:56px">${allOk ? "마무리 완료" : "할 일이 남았지만 이대로 마무리"}</button>
+      ${finishDone() ? `<p class="sub" style="margin:0;text-align:center">${mdOf(cur.finishedAt)}에 마무리했어요. 그 뒤로 바뀐 내용은 없어요.</p>` : ""}
+    </div>`;
+
+  finishOv.querySelectorAll("[data-f]").forEach(b => b.onclick = async () => {
+    const f = b.dataset.f;
+    if(f === "close") return closeFinish();
+    if(f === "check"){ tab = "check"; return closeFinish(); }
+    if(f === "gallery"){ afterGallery = renderFinish; return showGallery(true); }
+    if(f === "zip"){ await downloadZip(); return renderFinish(); }
+    if(f === "text"){ await copyText(); finishSent.text = true; return renderFinish(); }
+    if(f === "tsv"){ await copyTsv(); finishSent.excel = true; return renderFinish(); }
+    if(f === "xlsx"){ if(await saveXlsx()) finishSent.excel = true; return renderFinish(); }
+    if(f === "done"){
+      b.disabled = true;
+      const now = Date.now();
+      try{ await db.doc("sites/" + cur.id).update({finishedAt: now}); cur = {...cur, finishedAt: now}; toast("현장 마무리를 기록했어요", 3000); closeFinish(); }
+      catch(e){ toast(writeErr(e)); b.disabled = false; }
+    }
+  });
+}
+/* ---------- 체크리스트: 치수선에 붙인 항목 이름으로 자동 체크, 나머지는 눌러서 확인/해당 없음 ---------- */
+function checkStatus(space, site = cur, list = photos){
+  const dims = list.filter(p => p.space === space).flatMap(p => dimsOf(p).map(a => ({a, p})));
+  const marks = (site && site.checks) || {};
+  return itemsOf(space).map(it => {
+    const key = space + "|" + it.n, m = marks[key];
+    const vals = it.t === "dim" ? dims.filter(d => (d.a.label || "").trim() === it.n) : [];
+    const state = vals.length || m === "ok" ? "done" : m === "na" ? "na" : "todo";
+    return {...it, key, state, vals};
+  });
+}
+function checkSpaces(site = cur, list = photos, all = false){
+  const sp = spacesOf(site), used = new Set([...list.map(p => p.space), ...Object.keys(site.checks || {}).map(k => k.split("|")[0])]);
+  if(site === cur && view === "site") used.add(nextSpace);
+  const extra = [...used].filter(x => !sp.includes(x));
+  return (all ? [...sp, ...extra] : [...sp.filter(s => used.has(s)), ...extra]).filter(s => s !== SKETCH);
+}
+const missingCount = () => cur ? checkSpaces().filter(s => photos.some(p => p.space === s)).reduce((n, s) => n + checkStatus(s).filter(x => x.state === "todo").length, 0) : 0;
+function checklistHtml(){
+  const list = checkSpaces(cur, photos, showAllSpaces);
+  return list.map(s => {
+    const st = checkStatus(s), done = st.filter(x => x.state !== "todo").length;
+    return `<section class="group"><h3>${esc(s)} <span class="sub">${done}/${st.length}</span></h3>
+      <div class="cl">${st.map(it => `<button type="button" class="cl-row ${it.state}" data-key="${esc(it.key)}" data-type="${it.t}" ${it.vals.length ? `data-photo-of="${esc(it.vals[0].p.id)}"` : ""}>
+        <span class="cl-ic" aria-hidden="true">${it.state === "done" ? "✓" : it.state === "na" ? "–" : ""}</span>
+        <span class="cl-n">${esc(it.n)}${it.t === "check" ? ` <span class="sub">확인</span>` : ""}</span>
+        <span class="cl-v">${it.vals.length ? it.vals.map(d => esc(d.a.v) + (spreadOf(d.a) >= SPREAD_WARN ? ` <small style="color:var(--danger)">차${spreadOf(d.a)}</small>` : "") + (d.a.ref ? ` <small>${esc(d.a.ref)}</small>` : "")).join(", ")
+          : it.state === "na" ? "해당 없음" : it.state === "done" ? "확인함" : it.t === "dim" ? "안 잼" : "안 함"}</span>
+      </button>`).join("")}</div></section>`;
+  }).join("") + `
+    <button class="btn" id="allSpaces" type="button">${showAllSpaces ? "사진 있는 공간만 보기" : "모든 공간 보기"}</button>
+    <p class="sub" style="margin:0">치수선을 그을 때 항목 이름을 고르면 자동으로 체크돼요. 잴 필요 없는 항목은 눌러서 '해당 없음'으로 바꾸세요. 확인 항목은 누를 때마다 확인함 → 해당 없음 → 안 함으로 바뀌어요.</p>`;
+}
+function bindChecklist(body){
+  $("#allSpaces").onclick = () => { showAllSpaces = !showAllSpaces; renderSite(); };
+  body.querySelectorAll(".cl-row").forEach(b => b.onclick = async () => {
+    if(b.dataset.photoOf){ const p = photos.find(x => x.id === b.dataset.photoOf); if(p) openEditor(p); return; }
+    const checks = {...(cur.checks || {})}, k = b.dataset.key, now = checks[k];
+    if(b.dataset.type === "dim") checks[k] = now === "na" ? null : "na";
+    else checks[k] = !now ? "ok" : now === "ok" ? "na" : null;
+    if(!checks[k]) delete checks[k];
+    cur = {...cur, checks}; renderSite();
+    try{ await db.doc("sites/" + cur.id).update({checks, updatedAt: Date.now()}); }catch(e){ toast(writeErr(e)); }
+  });
+}
+function tableHtml(groups){
+  if(!groups.length) return `<p class="empty">사진이 없어서 실측표가 비어 있어요.</p>`;
+  return groups.map(g => {
+    const rows = g.items.flatMap(p => dimsOf(p).map(a => ({p, a})));
+    const memos = g.items.filter(p => p.memo);
+    return `<section class="group"><h3>${esc(g.n)}</h3>
+      ${rows.length ? `<div style="overflow-x:auto"><table class="m"><thead><tr><th>항목</th><th>치수(mm)</th><th>기준</th><th>사진</th></tr></thead><tbody>
+        ${rows.map(({p,a}) => `<tr><td>${esc(a.label||"치수")}</td><td class="v">${esc(a.v)}${a.vs && a.vs.length > 1 ? `<div class="sub" style="font-weight:400;font-size:12px;${spreadOf(a) >= SPREAD_WARN ? "color:var(--danger)" : ""}">${a.vs.join(" / ")} · 차${spreadOf(a)}</div>` : ""}</td><td>${esc(a.ref||"")}</td>
+          <td><button type="button" class="btn small ghost" data-photo="${esc(p.id)}" style="padding:0 6px">사진 ${numberOf(p.id)}</button></td></tr>`).join("")}
+      </tbody></table></div>` : `<p class="sub" style="margin:0">적힌 치수가 없어요.</p>`}
+      ${memos.map(p => `<p class="memo">사진 ${numberOf(p.id)} 메모: ${esc(p.memo)}</p>`).join("")}
+    </section>`;
+  }).join("");
+}
+
+/* ---------- sites ---------- */
+function siteFields(s = {}){
+  return [
+    {id:"name", label:"고객 이름 (꼭 적어 주세요)", value:s.name||"", placeholder:"예: 박진희 고객"},
+    {id:"address", label:"주소 · 아파트 동호수", value:s.address||"", placeholder:"예: 동탄 ○○아파트 101동 1203호"},
+    {id:"phone", label:"연락처", type:"tel", value:s.phone||"", placeholder:"010-0000-0000"},
+    {id:"date", label:"실측일", type:"date", value:s.date||today()},
+    {id:"memo", label:"현장 메모", type:"textarea", value:s.memo||"", placeholder:"예: 주방·욕실 리모델링 상담, 입주 12월 예정"}
+  ];
+}
+async function newSite(){
+  const r = await dialog({title:"새 현장 추가", fields: siteFields(), ok:"만들기"});
+  if(!r) return;
+  if(!r.name){ toast("고객 이름을 적어 주세요"); return newSite(); }
+  try{
+    const ref = db.collection("sites").doc(); const now = Date.now();
+    const data = {name:r.name, address:r.address, phone:r.phone, date:r.date, memo:r.memo, customSpaces:[], createdAt:now, updatedAt:now};
+    await ref.set(data);
+    sites = [{id: ref.id, ...data}, ...sites.filter(x => x.id !== ref.id)];
+    openSite(ref.id);
+  }catch(e){ toast(writeErr(e)); }
+}
+async function editSite(){
+  const r = await dialog({title:"현장 정보 고치기", fields: siteFields(cur), ok:"저장", danger: canDelete ? "이 현장 전체 삭제" : null});
+  if(!r) return;
+  if(r === "danger") return deleteSite();
+  if(!r.name){ toast("고객 이름을 적어 주세요"); return; }
+  try{ await db.doc("sites/"+cur.id).update({...r, updatedAt: Date.now()}); toast("저장했어요"); }catch(e){ toast(writeErr(e)); }
+}
+async function deleteSite(){
+  const unsent = OFFLINE && needsBackup(cur);
+  if(!await confirmBox(unsent ? "아직 사장님께 안 보낸 현장이에요" : "현장 전체 삭제",
+    unsent ? `"${cur.name}" 현장은 아직 보내지 않았거나, 보낸 뒤에 바뀐 내용이 있어요. 지우면 사진 ${photos.length}장이 모두 사라지고 되돌릴 수 없어요. 그래도 지울까요?`
+           : `"${cur.name}" 현장과 사진 ${photos.length}장을 ${OFFLINE ? "이 휴대폰에서 " : ""}모두 지울까요? 되돌릴 수 없어요.`)) return;
+  toast("삭제하는 중…", 0);
+  try{
+    const list = [...photos];
+    for(const p of list){
+      await db.doc("photos/"+p.id).delete();
+      if(assets){ for(const id of [p.assetId, p.annotatedId, p.thumbId].filter(Boolean)) await assets.delete(id).catch(()=>{}); }
+    }
+    await db.doc("sites/"+cur.id).delete();
+    toast("삭제했어요"); closeSite();
+  }catch(e){ toast(writeErr(e)); }
+}
+async function addSpace(){
+  const r = await dialog({title:"공간 이름 직접 입력", fields:[{id:"n", label:"공간 이름", placeholder:"예: 알파룸, 다용도실"}], ok:"추가"});
+  if(!r || !r.n) return;
+  const list = [...new Set([...(cur.customSpaces||[]), r.n])];
+  nextSpace = r.n;
+  try{ await db.doc("sites/"+cur.id).update({customSpaces: list, updatedAt: Date.now()}); cur = {...cur, customSpaces:list}; renderSite(); }catch(e){ toast(writeErr(e)); }
+}
+/* 직접 만든 공간 지우기: 그 공간 사진은 지우지 않고 '기타'로 옮긴다 */
+async function removeSpace(name){
+  if(!cur || !(cur.customSpaces || []).includes(name)) return;
+  const inSpace = photos.filter(p => p.space === name);
+  const r = await dialog({title:`'${name}' 공간 지우기`,
+    text: esc(inSpace.length ? `이 공간 사진 ${inSpace.length}장은 지우지 않고 '기타'로 옮겨요.` : "공간 이름만 목록에서 빠져요."),
+    ok:"지우기"});
+  if(r === null) return;
+  try{
+    for(const p of inSpace) await db.doc("photos/" + p.id).update({space:"기타", updatedAt: Date.now()});
+    const list = (cur.customSpaces || []).filter(x => x !== name);
+    const checks = {...(cur.checks || {})}; Object.keys(checks).forEach(k => { if(k.startsWith(name + "|")) delete checks[k]; });
+    await db.doc("sites/" + cur.id).update({customSpaces: list, checks, updatedAt: Date.now()});
+    cur = {...cur, customSpaces: list, checks};
+    if(nextSpace === name) nextSpace = "거실";
+    toast(`'${name}' 공간을 지웠어요`); renderSite();
+  }catch(e){ toast(writeErr(e)); }
+}
+function openSite(id){
+  cur = sites.find(s => s.id === id); if(!cur) return;
+  view = "site"; tab = "photos"; photos = []; nextSpace = "거실";
+  if(unsubPhotos) unsubPhotos();
+  unsubPhotos = db.collection("photos").where("siteId","==",id).onSnapshot(snap => {
+    photos = snap.docs.map(d => ({id:d.id, ...d.data()}));
+    if(view === "site" && $("#editor").hidden) renderSite();
+    if(!snap.metadata.fromCache) migrateNumbers(id);
+  }, err => toast("사진을 불러오지 못했어요 ("+err.code+")"));
+  renderSite(); window.scrollTo(0,0);
+}
+async function leaveSite(){
+  // 사진이 사라질 위험이 있을 때만 묻는다 (마무리 여부는 현장 화면 버튼으로 충분)
+  const n = unsavedPhotos().length;
+  if(n){
+    const r = await dialog({title:"사진첩에 안 옮긴 사진이 있어요",
+      text:`사진 ${n}장이 아직 휴대폰 사진첩에 없어요. 마무리에서 사진 저장과 실측표 보내기를 한 번에 할 수 있어요.`,
+      ok:"마무리하기", cancel:"그냥 나가기"});
+    if(r !== null) return openFinish();
+  }
+  closeSite();
+}
+function closeSite(){ if(unsubPhotos){ unsubPhotos(); unsubPhotos = null; } cur = null; photos = []; view = "home"; renderHome(); window.scrollTo(0,0); }
+const touchSite = () => cur ? db.doc("sites/"+cur.id).update({updatedAt: Date.now()}).catch(()=>{}) : Promise.resolve();
+function writeErr(e){
+  const c = e && e.code;
+  if(c === "quota_exceeded" || c === "quota_or_state") return "저장 공간이 가득 찼어요. 지난 현장 사진을 지우면 다시 저장돼요.";
+  if(c === "too_large") return "사진이 너무 커요.";
+  if(mode === "local") return "휴대폰에 저장하지 못했어요. 휴대폰 저장 공간이 남아 있는지 확인해 주세요.";
+  if(c === "invalid_argument" || c === "not_granted") return "저장 권한이 없어요. 이 툴의 주인 계정으로 열어 주세요.";
+  return "저장하지 못했어요. 인터넷 연결을 확인하고 다시 해 주세요.";
+}
+
+/* ---------- capture ---------- */
+function shrink(file){
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = () => {
+      let w = img.naturalWidth, h = img.naturalHeight; const s = Math.min(1, 2000 / Math.max(w, h));
+      w = Math.round(w*s); h = Math.round(h*s);
+      const c = document.createElement("canvas"); c.width = w; c.height = h;
+      c.getContext("2d").drawImage(img, 0, 0, w, h); URL.revokeObjectURL(url);
+      c.toBlob(b => b ? res({blob:b, w, h}) : rej(new Error("변환 실패")), "image/jpeg", 0.85);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error("이 사진 형식은 열 수 없어요")); };
+    img.src = url;
+  });
+}
+async function handleFiles(fileList, openAfter){
+  const files = [...fileList]; if(!files.length || !cur) return;
+  let last = null, okCount = 0, no = nextNo();
+  for(let i = 0; i < files.length; i++){
+    toast(`사진 올리는 중 ${i+1}/${files.length}`, 0);
+    try{
+      const {blob, w, h} = await shrink(files[i]);
+      const r = await assets.upload(blob, {type:"image/jpeg"});
+      localUrls.set(r.id, URL.createObjectURL(blob));
+      const ref = db.collection("photos").doc(); const now = Date.now();
+      const data = {siteId: cur.id, no, assetId: r.id, annotatedId: null, space: nextSpace, memo: "", ann: [], w, h, createdAt: now + i, updatedAt: now + i};
+      await ref.set(data); last = {id: ref.id, ...data}; okCount++; no++;
+    }catch(e){ toast(e && e.code ? writeErr(e) : (e.message || "사진을 올리지 못했어요")); await new Promise(r => setTimeout(r, 1600)); }
+  }
+  await touchSite();
+  toast(okCount ? `${okCount}장 저장했어요` : "저장된 사진이 없어요");
+  if(openAfter && last && files.length === 1) openEditor(last);
+}
+/* 평면 스케치: 모눈종이 한 장을 사진처럼 저장하고, 같은 편집기(직선·치수선·글자)로 그린다 */
+async function addSketch(){
+  if(!assets || !cur) return;
+  toast("스케치 종이 만드는 중…", 0);
+  try{
+    const W = 1600, H = 1200, c = document.createElement("canvas"); c.width = W; c.height = H;
+    const x = c.getContext("2d");
+    x.fillStyle = "#ffffff"; x.fillRect(0, 0, W, H);
+    const grid = (i, horiz) => {
+      const major = i % 200 === 0;
+      x.strokeStyle = major ? "#c9d1db" : "#e8ecf1"; x.lineWidth = major ? 2 : 1;
+      x.beginPath();
+      if(horiz){ x.moveTo(0, i + .5); x.lineTo(W, i + .5); } else { x.moveTo(i + .5, 0); x.lineTo(i + .5, H); }
+      x.stroke();
+    };
+    for(let i = 0; i <= W; i += 40) grid(i, false);
+    for(let i = 0; i <= H; i += 40) grid(i, true);
+    const blob = await new Promise((res, rej) => c.toBlob(b => b ? res(b) : rej(new Error("변환 실패")), "image/jpeg", 0.9));
+    const r = await assets.upload(blob, {type:"image/jpeg"});
+    localUrls.set(r.id, URL.createObjectURL(blob));
+    const ref = db.collection("photos").doc(), now = Date.now();
+    const data = {siteId: cur.id, no: nextNo(), kind: "sketch", assetId: r.id, annotatedId: null, thumbId: null, space: SKETCH, memo: "", ann: [], w: W, h: H, createdAt: now, updatedAt: now};
+    await ref.set(data); await touchSite();
+    toast("스케치 종이를 만들었어요. 직선으로 벽을 긋고, 치수선으로 길이를 적으세요.", 3500);
+    openEditor({id: ref.id, ...data});
+  }catch(e){ toast(e && e.code ? writeErr(e) : "스케치 종이를 만들지 못했어요"); }
+}
+$("#fileCam").addEventListener("change", e => { handleFiles(e.target.files, true); e.target.value = ""; });
+$("#fileAlbum").addEventListener("change", e => { handleFiles(e.target.files, false); e.target.value = ""; });
+$("#fileZip").addEventListener("change", async e => { const f = e.target.files[0]; e.target.value = ""; await importZip(f); });
+
+/* ---------- drawing ---------- */
+function metrics(W, H){ const m = Math.min(W, H); return {lw: Math.max(2, m*0.005), fs: Math.max(16, m*0.042)}; }
+function rr(ctx, x, y, w, h, r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+/* 어두운 색(스케치용 먹색)은 흰 바탕 위에 쓰므로 테두리·글자 상자를 밝게 */
+const isDarkColor = c => { const m = /^#([0-9a-f]{6})$/i.exec(c || ""); if(!m) return false; const n = parseInt(m[1], 16); return ((n >> 16) * 299 + ((n >> 8 & 255) * 587) + ((n & 255) * 114)) / 1000 < 110; };
+const halo = c => isDarkColor(c) ? "rgba(255,255,255,.75)" : "rgba(0,0,0,.5)";
+function drawLabel(ctx, x, y, txt, c, m){
+  ctx.save(); ctx.font = `700 ${m.fs}px ${CANVAS_FONT}`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  const w = ctx.measureText(txt).width, p = m.fs*0.35, h = m.fs*1.4;
+  ctx.fillStyle = isDarkColor(c) ? "rgba(255,255,255,.9)" : "rgba(8,13,20,.8)"; rr(ctx, x-w/2-p, y-h/2, w+p*2, h, m.fs*0.25); ctx.fill();
+  ctx.fillStyle = c; ctx.fillText(txt, x, y + m.fs*0.05); ctx.restore();
+  return {x: x-w/2-p, y: y-h/2, w: w+p*2, h};
+}
+function drawDim(ctx, x1, y1, x2, y2, c, m){
+  const dx = x2-x1, dy = y2-y1, L = Math.hypot(dx, dy) || 1, ux = dx/L, uy = dy/L, nx = -uy, ny = ux;
+  const t = m.lw*3.4, a = m.lw*3.6;
+  const path = () => {
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2);
+    ctx.moveTo(x1+nx*t, y1+ny*t); ctx.lineTo(x1-nx*t, y1-ny*t);
+    ctx.moveTo(x2+nx*t, y2+ny*t); ctx.lineTo(x2-nx*t, y2-ny*t);
+    ctx.moveTo(x1+ux*a+nx*a*.55, y1+uy*a+ny*a*.55); ctx.lineTo(x1,y1); ctx.lineTo(x1+ux*a-nx*a*.55, y1+uy*a-ny*a*.55);
+    ctx.moveTo(x2-ux*a+nx*a*.55, y2-uy*a+ny*a*.55); ctx.lineTo(x2,y2); ctx.lineTo(x2-ux*a-nx*a*.55, y2-uy*a-ny*a*.55);
+  };
+  ctx.save(); ctx.lineCap = "round"; ctx.lineJoin = "round";
+  path(); ctx.strokeStyle = halo(c); ctx.lineWidth = m.lw*2.4; ctx.stroke();
+  path(); ctx.strokeStyle = c; ctx.lineWidth = m.lw; ctx.stroke(); ctx.restore();
+}
+const spreadOf = a => a.vs && a.vs.length > 1 ? Math.round((Math.max(...a.vs) - Math.min(...a.vs)) * 10) / 10 : 0;
+function dimText(a){
+  const multi = a.vs && a.vs.length > 1 ? ` [${a.vs.length}점·차${spreadOf(a)}]` : "";
+  return (a.label ? a.label + " " : "") + (a.v || "?") + multi + (a.ref ? " (" + a.ref + ")" : "");
+}
+function renderAnn(ctx, list, W, H, boxes){
+  const m = metrics(W, H);
+  list.forEach((a, i) => {
+    if(a.t === "pen"){
+      if(!a.pts || a.pts.length < 2) return;
+      ctx.save(); ctx.lineCap = "round"; ctx.lineJoin = "round";
+      for(const [col, w] of [[halo(a.c), m.lw*2.2], [a.c, m.lw]]){
+        ctx.beginPath(); a.pts.forEach(([x,y], j) => j ? ctx.lineTo(x*W, y*H) : ctx.moveTo(x*W, y*H));
+        ctx.strokeStyle = col; ctx.lineWidth = w; ctx.stroke();
+      }
+      ctx.restore();
+    } else if(a.t === "line"){
+      ctx.save(); ctx.lineCap = "round";
+      for(const [col, w] of [[halo(a.c), m.lw*3.4], [a.c, m.lw*1.7]]){
+        ctx.beginPath(); ctx.moveTo(a.x1*W, a.y1*H); ctx.lineTo(a.x2*W, a.y2*H);
+        ctx.strokeStyle = col; ctx.lineWidth = w; ctx.stroke();
+      }
+      ctx.restore();
+    } else if(a.t === "dim"){
+      drawDim(ctx, a.x1*W, a.y1*H, a.x2*W, a.y2*H, a.c, m);
+      if(a.v || a.label){ const b = drawLabel(ctx, (a.x1+a.x2)/2*W, (a.y1+a.y2)/2*H, dimText(a), a.c, m); if(boxes) boxes.push({i, ...b}); }
+    } else if(a.t === "text"){
+      const b = drawLabel(ctx, a.x*W, a.y*H, a.text, a.c, m); if(boxes) boxes.push({i, ...b});
+    }
+  });
+}
+
+/* ---------- editor ---------- */
+const cv = $("#cv"), loupe = $("#loupe");
+const ed = {photo:null, img:null, ann:[], hist:[], tool:"dim", color:COLORS[0], drag:null, boxes:[], w:0, h:0, dirty:false, view:{s:1, tx:0, ty:0}};
+
+function buildTools(){
+  const tools = [["dim","치수선"],["line","직선"],["text","글자"],["pen","펜"],["erase","지우기"]];
+  // 왼쪽은 밀어서 보는 도구(색은 버튼 하나로 접음), 오른쪽 되돌리기·맞춤은 항상 보이게 고정
+  const left = ed.colorOpen
+    ? COLORS.map(c => `<button type="button" class="swatch" data-color="${c}" style="background:${c}" aria-label="색 ${c}" aria-pressed="${ed.color===c}"></button>`).join("")
+    : tools.map(([k,n]) => `<button type="button" class="tool" data-tool="${k}" aria-pressed="${ed.tool===k}">${ICON[k]}${n}</button>`).join("") +
+      `<button type="button" class="tool" id="colorBtn" aria-label="색 고르기"><span class="cdot" style="background:${ed.color}"></span>색</button>`;
+  $("#edTools").innerHTML = `<div class="tools-scroll">${left}</div>
+    <div class="tools-fixed">
+      <button type="button" class="tool" id="undo">${ICON.undo}되돌리기</button>
+      <button type="button" class="tool icon" id="fitBtn" aria-label="화면 맞춤">${ICON.fit}맞춤</button>
+    </div>`;
+  $("#fitBtn").onclick = () => { ed.view = {s:1, tx:0, ty:0}; applyView(); };
+  const cb = $("#colorBtn"); if(cb) cb.onclick = () => { ed.colorOpen = true; buildTools(); };
+  $("#edTools").querySelectorAll("[data-tool]").forEach(b => b.onclick = () => { ed.tool = b.dataset.tool; buildTools(); });
+  $("#edTools").querySelectorAll("[data-color]").forEach(b => b.onclick = () => { ed.color = b.dataset.color; ed.colorOpen = false; buildTools(); });
+  $("#undo").onclick = () => { if(!ed.hist.length){ toast("되돌릴 게 없어요"); return; } ed.ann = ed.hist.pop(); ed.dirty = true; draw(); autoSave(); };
+  updateHint();
+}
+/* 이 공간에서 아직 안 잰 치수 항목 (지금 편집 중인 선까지 포함해서 계산) */
+function remainingFor(space){
+  const labels = new Set([...photos.filter(p => p.space === space && (!ed.photo || p.id !== ed.photo.id)).flatMap(p => dimsOf(p)), ...ed.ann.filter(a => a.t === "dim")].map(a => (a.label || "").trim()));
+  const ch = (cur && cur.checks) || {};
+  return itemsOf(space).filter(it => it.t === "dim" && !labels.has(it.n) && !ch[space + "|" + it.n]).map(it => it.n);
+}
+function updateHint(){
+  if(!ed.photo) return;
+  let t = HINTS[ed.tool];
+  if(ed.tool === "dim" && ed.ann.some(a => a.t === "dim")){
+    const r = remainingFor($("#edSpace").value);
+    t = r.length ? `${$("#edSpace").value} 남은 항목 ${r.length}개: ${r.slice(0, 4).join(", ")}${r.length > 4 ? " …" : ""}` : `${$("#edSpace").value} 치수 항목을 다 쟀어요.`;
+  }
+  $("#edHint").textContent = t;
+}
+/* 바꿀 때마다 저장 (선은 pushHist 바로 뒤에 바뀌므로 잠깐 기다렸다 저장). 선이 그려진 합성 사진은 '완료' 때 만든다 */
+function pushHist(){ ed.hist.push(JSON.parse(JSON.stringify(ed.ann))); if(ed.hist.length > 50) ed.hist.shift(); ed.dirty = true; autoSave(); }
+let autoT = null, autoBusy = false, autoAgain = false;
+const edState = t => { $("#edState").textContent = t; };
+function autoSave(){ clearTimeout(autoT); autoT = setTimeout(() => { updateHint(); flushAuto(); }, 700); edState("저장 중…"); }
+async function flushAuto(){
+  clearTimeout(autoT); autoT = null;
+  const p = ed.photo; if(!p) return;
+  if(autoBusy){ autoAgain = true; return; }
+  autoBusy = true;
+  const annChanged = JSON.stringify(ed.ann) !== JSON.stringify(p.ann || []);
+  const data = {ann: JSON.parse(JSON.stringify(ed.ann)), space: $("#edSpace").value, memo: $("#edMemo").value.trim(), updatedAt: Date.now()};
+  if(annChanged) data.annotatedStale = true;
+  const changed = annChanged || data.memo !== (p.memo || "") || data.space !== p.space;
+  try{
+    await db.doc("photos/" + p.id).update(data); Object.assign(p, data); if(ed.photo === p) edState("자동 저장됨");
+    // 실제로 바뀐 게 있으면 현장도 '바뀜'으로 표시해서, 완료를 안 누르고 나가도 백업 알림이 뜨게 한다
+    if(changed) await touchSite();
+  }
+  catch(e){ if(ed.photo === p){ edState("저장 안 됨"); toast(writeErr(e)); } }
+  autoBusy = false;
+  if(autoAgain){ autoAgain = false; await flushAuto(); }
+}
+$("#edMemo").addEventListener("input", () => { if(ed.photo) autoSave(); });
+$("#edSpace").addEventListener("change", () => { if(ed.photo) autoSave(); });
+/* 전화가 오거나 다른 앱으로 넘어가면 기다리지 않고 바로 저장 */
+document.addEventListener("visibilitychange", () => { if(document.visibilityState === "hidden" && autoT) flushAuto(); });
+window.addEventListener("pagehide", () => { if(autoT) flushAuto(); });
+
+function openEditor(p){
+  ed.photo = p; ed.ann = JSON.parse(JSON.stringify(p.ann || [])); ed.hist = []; ed.dirty = false; ed.img = null;
+  const sketch = p.kind === "sketch";
+  ed.tool = sketch ? "line" : "dim"; ed.color = sketch ? INK : COLORS[0];
+  ed.view = {s:1, tx:0, ty:0}; applyView();
+  const sp = spacesOf(cur); if(!sp.includes(p.space)) sp.push(p.space);
+  $("#edSpace").innerHTML = sp.map(n => `<option ${n===p.space?"selected":""}>${esc(n)}</option>`).join("");
+  $("#edMemo").value = p.memo || "";
+  edState("");
+  $("#editor").hidden = false; document.body.classList.add("noscroll");
+  buildTools();
+  const img = new Image();
+  img.onload = () => { ed.img = img; ed.w = img.naturalWidth; ed.h = img.naturalHeight; fit(); draw(); if(document.fonts) document.fonts.ready.then(draw); };
+  img.onerror = () => toast("사진을 불러오지 못했어요");
+  img.src = imgSrc(p.assetId);
+}
+/* 캔버스는 사진 원래 크기로 그리고 화면에는 줄여서 보여 준다. 확대는 CSS transform이라
+   getBoundingClientRect 기반 좌표 계산(toImg 등)이 그대로 맞고, 확대해도 선명하다 */
+function fit(){
+  if(!ed.img) return;
+  const r = $("#edStage").getBoundingClientRect();
+  const s = Math.min((r.width-8)/ed.w, (r.height-8)/ed.h);
+  cv.style.width = Math.max(1, Math.floor(ed.w*s)) + "px"; cv.style.height = Math.max(1, Math.floor(ed.h*s)) + "px";
+  cv.width = ed.w; cv.height = ed.h;
+  ed.view = {s:1, tx:0, ty:0}; applyView();
+}
+function applyView(){
+  const v = ed.view;
+  cv.style.transform = v.s === 1 && !v.tx && !v.ty ? "" : `translate(${v.tx}px,${v.ty}px) scale(${v.s})`;
+}
+function clampView(v){
+  const st = $("#edStage"), L = cv.offsetLeft, T = cv.offsetTop, w = cv.offsetWidth, h = cv.offsetHeight, keep = 60;
+  const s = Math.min(8, Math.max(1, v.s));
+  const tx = Math.min(st.clientWidth - keep - L, Math.max(keep - L - w*s, v.tx));
+  const ty = Math.min(st.clientHeight - keep - T, Math.max(keep - T - h*s, v.ty));
+  return s === 1 ? {s:1, tx:0, ty:0} : {s, tx, ty};
+}
+function draw(){
+  if(!ed.img) return;
+  const ctx = cv.getContext("2d"), k = cv.width / ed.w;
+  ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,cv.width,cv.height); ctx.setTransform(k,0,0,k,0,0);
+  ctx.drawImage(ed.img, 0, 0, ed.w, ed.h);
+  ed.boxes = []; renderAnn(ctx, ed.ann, ed.w, ed.h, ed.boxes);
+  if(ed.drag && ed.drag.preview) renderAnn(ctx, [ed.drag.preview], ed.w, ed.h);
+}
+window.addEventListener("resize", () => { if(!$("#editor").hidden){ fit(); draw(); } });
+
+function toImg(e){ const r = cv.getBoundingClientRect(); return {x: (e.clientX - r.left)/r.width*ed.w, y: (e.clientY - r.top)/r.height*ed.h}; }
+const cssPerImg = () => cv.getBoundingClientRect().width / ed.w;
+function hitBox(p){ const pad = 10/cssPerImg(); for(let j = ed.boxes.length-1; j >= 0; j--){ const b = ed.boxes[j]; if(p.x >= b.x-pad && p.x <= b.x+b.w+pad && p.y >= b.y-pad && p.y <= b.y+b.h+pad) return b.i; } return -1; }
+function segDist(p, x1, y1, x2, y2){ const dx = x2-x1, dy = y2-y1, L = dx*dx+dy*dy || 1; let t = ((p.x-x1)*dx + (p.y-y1)*dy)/L; t = Math.max(0, Math.min(1, t)); return Math.hypot(p.x-(x1+t*dx), p.y-(y1+t*dy)); }
+function hitAny(p){
+  const b = hitBox(p); if(b >= 0) return b;
+  const tol = 16/cssPerImg(), W = ed.w, H = ed.h;
+  for(let i = ed.ann.length-1; i >= 0; i--){
+    const a = ed.ann[i];
+    if(a.t === "dim" && segDist(p, a.x1*W, a.y1*H, a.x2*W, a.y2*H) < tol) return i;
+    if(a.t === "line" && segDist(p, a.x1*W, a.y1*H, a.x2*W, a.y2*H) < tol) return i;
+    if(a.t === "pen" && a.pts.some(([x,y], j) => j && segDist(p, a.pts[j-1][0]*W, a.pts[j-1][1]*H, x*W, y*H) < tol)) return i;
+  }
+  return -1;
+}
+function snap(s, p){
+  const dx = p.x - s.x, dy = p.y - s.y, tan = Math.tan(6*Math.PI/180);
+  if(Math.abs(dy) <= Math.abs(dx)*tan) return {x:p.x, y:s.y};
+  if(Math.abs(dx) <= Math.abs(dy)*tan) return {x:s.x, y:p.y};
+  return p;
+}
+function showLoupe(p){
+  const k = cv.width/ed.w, cx = p.x*k, cy = p.y*k, L = loupe.width, zoom = 2.6;
+  const sz = (L/zoom) * (cv.width/cv.getBoundingClientRect().width) / 2;
+  const lc = loupe.getContext("2d"); lc.fillStyle = "#000"; lc.fillRect(0,0,L,L);
+  lc.imageSmoothingEnabled = true; lc.drawImage(cv, cx - sz/2, cy - sz/2, sz, sz, 0, 0, L, L);
+  lc.strokeStyle = "#fff"; lc.lineWidth = 3; lc.beginPath(); lc.moveTo(L/2-22, L/2); lc.lineTo(L/2+22, L/2); lc.moveTo(L/2, L/2-22); lc.lineTo(L/2, L/2+22); lc.stroke();
+  lc.strokeStyle = "#e11"; lc.lineWidth = 1.5; lc.stroke();
+  const r = cv.getBoundingClientRect(), stage = $("#edStage").getBoundingClientRect();
+  const leftHalf = (r.left + p.x*cssPerImg()) < stage.left + stage.width/2;
+  loupe.style.left = leftHalf ? "" : "10px"; loupe.style.right = leftHalf ? "10px" : ""; loupe.style.display = "block";
+}
+const hideLoupe = () => loupe.style.display = "none";
+const round4 = n => Math.round(n*10000)/10000;
+
+/* 손가락 하나 = 그리기, 두 개 = 확대·이동 (그리던 선은 취소) */
+const ptrs = new Map(); let pinch = null;
+const stagePt = e => { const r = $("#edStage").getBoundingClientRect(); return {x: e.clientX - r.left, y: e.clientY - r.top}; };
+function startPinch(){
+  const [a, b] = [...ptrs.values()];
+  pinch = {d0: Math.hypot(b.x-a.x, b.y-a.y) || 1, m0: {x:(a.x+b.x)/2, y:(a.y+b.y)/2}, v0: {...ed.view}};
+}
+function movePinch(){
+  const [a, b] = [...ptrs.values()], g = pinch;
+  const d = Math.hypot(b.x-a.x, b.y-a.y), m = {x:(a.x+b.x)/2, y:(a.y+b.y)/2};
+  const s = Math.min(8, Math.max(1, g.v0.s * d / g.d0)), L = cv.offsetLeft, T = cv.offsetTop;
+  const lx = (g.m0.x - L - g.v0.tx) / g.v0.s, ly = (g.m0.y - T - g.v0.ty) / g.v0.s;
+  ed.view = clampView({s, tx: m.x - L - lx*s, ty: m.y - T - ly*s}); applyView();
+}
+cv.addEventListener("pointerdown", e => {
+  if(!ed.img) return;
+  e.preventDefault(); try{ cv.setPointerCapture(e.pointerId); }catch(_){}
+  ptrs.set(e.pointerId, stagePt(e));
+  if(ptrs.size === 2){ if(ed.drag){ ed.drag = null; hideLoupe(); draw(); } startPinch(); return; }
+  if(ptrs.size > 2 || pinch || ed.drag) return;
+  const p = toImg(e); ed.drag = {id: e.pointerId, start: p, end: p, moved: false, pts: [p], preview: null};
+  if(ed.tool === "dim" || ed.tool === "line" || ed.tool === "pen") showLoupe(p);
+});
+cv.addEventListener("pointermove", e => {
+  if(ptrs.has(e.pointerId)) ptrs.set(e.pointerId, stagePt(e));
+  if(pinch){ if(ptrs.size >= 2) movePinch(); return; }
+  const d = ed.drag; if(!d || d.id !== e.pointerId) return;
+  let p = toImg(e);
+  if(!d.moved && Math.hypot(p.x-d.start.x, p.y-d.start.y)*cssPerImg() > 8) d.moved = true;
+  if((ed.tool === "dim" || ed.tool === "line") && d.moved){
+    p = snap(d.start, p); d.end = p;
+    d.preview = {t:ed.tool, x1:d.start.x/ed.w, y1:d.start.y/ed.h, x2:p.x/ed.w, y2:p.y/ed.h, c:ed.color};
+    draw(); showLoupe(p);
+  } else if(ed.tool === "pen"){
+    // 손가락이 3px 넘게 움직였을 때만 점을 남긴다 (선 모양은 같고, 저장 크기는 훨씬 작아짐)
+    const lp = d.pts[d.pts.length - 1];
+    if(Math.hypot(p.x - lp.x, p.y - lp.y) * cssPerImg() < 3) return;
+    d.pts.push(p); d.preview = {t:"pen", c:ed.color, pts: d.pts.map(q => [q.x/ed.w, q.y/ed.h])}; draw(); showLoupe(p);
+  }
+});
+async function endDrag(e){
+  ptrs.delete(e.pointerId);
+  if(pinch){ if(ptrs.size < 2) pinch = null; return; }
+  const d = ed.drag; if(!d || d.id !== e.pointerId) return;
+  ed.drag = null; hideLoupe();
+  if(e.type === "pointercancel"){ draw(); return; }
+  const p = toImg(e);
+  const longEnough = d.moved && Math.hypot(d.end.x-d.start.x, d.end.y-d.start.y)*cssPerImg() > 20;
+  if(ed.tool === "dim"){
+    if(longEnough){
+      const a = {t:"dim", x1:round4(d.start.x/ed.w), y1:round4(d.start.y/ed.h), x2:round4(d.end.x/ed.w), y2:round4(d.end.y/ed.h), c:ed.color, v:"", label:"", ref:"", vs:null};
+      ed.ann.push(a); draw();
+      const r = await dimDialog(a, false);
+      ed.ann.pop();
+      if(r){ pushHist(); ed.ann.push({...a, v:r.v, label:r.label, ref:r.ref, vs:r.vs}); }
+      draw();
+    } else { draw(); const i = hitBox(p); if(i >= 0) editAnn(i); }
+  } else if(ed.tool === "line"){
+    if(longEnough){ pushHist(); ed.ann.push({t:"line", x1:round4(d.start.x/ed.w), y1:round4(d.start.y/ed.h), x2:round4(d.end.x/ed.w), y2:round4(d.end.y/ed.h), c:ed.color}); }
+    draw();
+  } else if(ed.tool === "text"){
+    const i = hitBox(p);
+    if(i >= 0) return editAnn(i);
+    const r = await dialog({title:"글자 넣기", fields:[{id:"text", label:"넣을 글자", placeholder:"예: 배관, 콘센트, 창틀 높이 주의"}], ok:"넣기"});
+    if(r && r.text){ pushHist(); ed.ann.push({t:"text", x:round4(p.x/ed.w), y:round4(p.y/ed.h), text:r.text, c:ed.color}); }
+    draw();
+  } else if(ed.tool === "pen"){
+    if(d.pts.length > 1){ pushHist(); ed.ann.push({t:"pen", c:ed.color, pts: d.pts.filter((q,j) => j % 1 === 0).map(q => [round4(q.x/ed.w), round4(q.y/ed.h)])}); }
+    draw();
+  } else if(ed.tool === "erase"){
+    const i = hitAny(p);
+    if(i >= 0){ pushHist(); ed.ann.splice(i, 1); draw(); } else toast("지울 선이나 글자를 정확히 눌러 주세요");
+  }
+}
+cv.addEventListener("pointerup", endDrag);
+cv.addEventListener("pointercancel", endDrag);
+
+function dimDialog(a, editing){
+  // 항목 칩: 이 공간에서 아직 안 잰 것부터. 고치는 중인 선의 항목도 남겨 둔다
+  const space = $("#edSpace").value, rem = remainingFor(space), all = itemsOf(space).filter(i => i.t === "dim").map(i => i.n);
+  const chips = [...new Set([...(a.label ? [a.label] : []), ...rem, ...all])];
+  // 순서: 항목 칩 → 기준 → 숫자 → 확인. 칩을 누르면 숫자 칸으로 넘어가 키패드가 열린다.
+  // 여러 점 측정(같은 자리를 높이 바꿔 다시 잰 값)은 눌렀을 때만 펼치고, 가구는 가장 좁은 값에 맞추므로 최솟값을 기록
+  const vs0 = a.vs && a.vs.length > 1 ? a.vs : null;
+  return new Promise(resolve => {
+    const back = document.createElement("div"); back.className = "dlg-back";
+    back.innerHTML = `<form class="dlg dim-dlg" role="dialog" aria-modal="true" aria-label="치수 입력">
+      <h2>${editing ? "치수 고치기" : "치수 적기"}</h2>
+      <div class="field"><span class="flabel">무엇을 쟀나요? <span class="sub">안 잰 항목이 앞, 잰 항목은 ✓</span></span>
+        <div class="chips" data-g="label">${chips.map(c => `<button type="button" class="chip" data-v="${esc(c)}" aria-pressed="${c === a.label}">${esc(c)}${rem.includes(c) ? "" : ` <span class="n">✓</span>`}</button>`).join("")}</div>
+        <input id="dLabel" class="small-in" value="${esc(a.label || "")}" placeholder="목록에 없으면 직접 입력" autocomplete="off" aria-label="항목 이름">
+      </div>
+      <div class="field"><span class="flabel">기준 <span class="sub">선택 · 다시 누르면 해제</span></span>
+        <div class="chips" data-g="ref">${REF_CHIPS.map(c => `<button type="button" class="chip small" data-v="${esc(c)}" aria-pressed="${c === a.ref}">${esc(c)}</button>`).join("")}</div>
+      </div>
+      <div class="field"><label for="dV">치수 (mm)</label>
+        <input id="dV" class="big" inputmode="numeric" enterkeyhint="done" autocomplete="off" value="${esc(vs0 ? vs0[0] : (a.v || ""))}" placeholder="예: 2450">
+        <div class="multi" id="dMulti" style="${vs0 ? "" : "display:none"}">
+          <input id="dV2" inputmode="numeric" autocomplete="off" value="${esc(vs0 && vs0[1] != null ? vs0[1] : "")}" placeholder="2번째 (다른 높이)" aria-label="2번째 잰 값">
+          <input id="dV3" inputmode="numeric" autocomplete="off" value="${esc(vs0 && vs0[2] != null ? vs0[2] : "")}" placeholder="3번째" aria-label="3번째 잰 값">
+        </div>
+        <button type="button" class="linkbtn" id="dMultiBtn" style="${vs0 ? "display:none" : ""}">+ 같은 자리 여러 번 재기 (붙박이장·기울어진 벽)</button>
+        <p class="err" id="dErr" hidden></p>
+      </div>
+      <div class="actions">
+        <button type="button" class="btn" data-a="cancel">취소</button>
+        <button type="submit" class="btn primary">${editing ? "저장" : "확인"}</button>
+        ${editing ? `<button type="button" class="btn danger wide" data-a="danger">이 치수 지우기</button>` : ""}
+      </div></form>`;
+    document.body.appendChild(back);
+    const form = back.querySelector("form"), q = s => form.querySelector(s);
+    let ref = a.ref || "";
+    const done = v => { back.remove(); resolve(v); };
+    const markLabel = () => form.querySelectorAll('[data-g="label"] .chip').forEach(x => x.setAttribute("aria-pressed", x.dataset.v === q("#dLabel").value.trim()));
+    form.addEventListener("click", e => {
+      const c = e.target.closest(".chip"); if(!c) return;
+      if(c.parentElement.dataset.g === "label"){ q("#dLabel").value = c.dataset.v; markLabel(); q("#dV").focus(); }
+      else { ref = ref === c.dataset.v ? "" : c.dataset.v; form.querySelectorAll('[data-g="ref"] .chip').forEach(x => x.setAttribute("aria-pressed", x.dataset.v === ref)); }
+    });
+    q("#dLabel").addEventListener("input", markLabel);
+    q("#dMultiBtn").onclick = () => { q("#dMulti").style.display = ""; q("#dMultiBtn").style.display = "none"; q("#dV2").focus(); };
+    back.addEventListener("click", e => {
+      const b = e.target.closest("[data-a]"); if(b) return done(b.dataset.a === "danger" ? "danger" : null);
+      if(e.target === back) done(null);
+    });
+    form.addEventListener("submit", e => {
+      e.preventDefault();
+      const clean = s => String(s || "").replace(/[,\s]/g, "").replace(/mm$/i, "");
+      const raw = [clean(q("#dV").value), clean(q("#dV2").value), clean(q("#dV3").value)];
+      const err = m => { const p = q("#dErr"); p.textContent = m; p.hidden = false; q("#dV").focus(); };
+      if(!raw[0]) return err("치수를 적어 주세요");
+      if(raw.some(x => x && !/^\d+(\.\d+)?$/.test(x))) return err("치수는 숫자만 적어 주세요 (mm 단위, 예: 2450)");
+      const nums = raw.filter(Boolean).map(Number);
+      const out = {label: q("#dLabel").value.trim(), ref, v: String(Math.min(...nums)), vs: nums.length > 1 ? nums : null};
+      const sp = spreadOf(out);
+      if(sp >= SPREAD_WARN) toast(`차이 ${sp}mm · 기울어짐 주의. 가장 작은 값 ${out.v}으로 기록했어요.`, 4000);
+      done(out);
+    });
+    // 항목이 이미 정해져 있으면 바로 숫자 키패드, 아니면 칩부터 보이게 키패드를 열지 않는다
+    if(a.label) setTimeout(() => q("#dV").focus(), 60);
+  });
+}
+async function editAnn(i){
+  const a = ed.ann[i];
+  if(a.t === "dim"){
+    const r = await dimDialog(a, true); if(r === null) return;
+    pushHist();
+    if(r === "danger") ed.ann.splice(i, 1); else ed.ann[i] = {...a, v:r.v, label:r.label, ref:r.ref, vs:r.vs};
+  } else if(a.t === "text"){
+    const r = await dialog({title:"글자 고치기", fields:[{id:"text", label:"글자", value:a.text}], ok:"저장", danger:"이 글자 지우기"});
+    if(r === null) return;
+    pushHist();
+    if(r === "danger" || !r.text) ed.ann.splice(i, 1); else ed.ann[i] = {...a, text:r.text};
+  }
+  draw();
+}
+
+/* 저장 공간 절약: 치수가 그려진 큰 사진은 따로 저장하지 않고(필요할 때 원본 위에 다시 그림),
+   목록에 보여 줄 작은 미리보기(긴 변 480px)만 저장한다 */
+function makeThumb(){
+  return new Promise((res, rej) => {
+    const k = Math.min(1, 480 / Math.max(ed.w, ed.h));
+    const c = document.createElement("canvas"); c.width = Math.round(ed.w*k); c.height = Math.round(ed.h*k);
+    const ctx = c.getContext("2d"); ctx.scale(k, k); ctx.drawImage(ed.img, 0, 0, ed.w, ed.h); renderAnn(ctx, ed.ann, ed.w, ed.h);
+    try{ c.toBlob(b => b ? res(b) : rej(new Error("합성 실패")), "image/jpeg", 0.8); }catch(e){ rej(e); }
+  });
+}
+function editorChanged(){
+  const p = ed.photo;
+  return ed.dirty || $("#edMemo").value.trim() !== (p.memo||"") || $("#edSpace").value !== p.space;
+}
+function closeEditor(){ $("#editor").hidden = true; document.body.classList.remove("noscroll"); hideLoupe(); ed.photo = null; ed.img = null; renderSite(); }
+
+$("#edClose").onclick = () => {
+  // 바뀐 내용은 이미 자동 저장되어 있으니 묻지 않고, 합성 사진만 마저 만든다
+  if(editorChanged() || ed.photo.annotatedStale || autoT) return saveEditor();
+  closeEditor();
+};
+async function saveEditor(){
+  const btn = $("#edSave"); if(btn.disabled) return; btn.disabled = true;
+  clearTimeout(autoT); autoT = null;
+  while(autoBusy) await sleep(50);
+  toast("저장하는 중…", 0);
+  try{
+    const p = ed.photo, space = $("#edSpace").value, memo = $("#edMemo").value.trim();
+    const annChanged = JSON.stringify(ed.ann) !== JSON.stringify(p.ann || []);
+    let thumbId = p.thumbId || null, thumbFailed = false;
+    const old = [];
+    if(annChanged || p.annotatedStale || p.annotatedId || (ed.ann.length && !thumbId)){
+      const prev = [p.annotatedId, thumbId].filter(Boolean);   // 예전 방식의 큰 합성 사진·옛 미리보기는 정리
+      if(ed.ann.length){
+        // 인터넷이 약하면 미리보기만 못 만들고 넘어간다 (치수는 그대로 저장되고, 다음 '완료' 때 다시 만든다)
+        try{
+          const blob = await makeThumb(); const r = await assets.upload(blob, {type:"image/jpeg"});
+          localUrls.set(r.id, URL.createObjectURL(blob)); thumbId = r.id; old.push(...prev);
+        }catch(_){ thumbFailed = true; }
+      } else { thumbId = null; old.push(...prev); }
+    }
+    const changedNow = annChanged || memo !== (p.memo || "") || space !== p.space;
+    const upd = {space, memo, ann: ed.ann, annotatedId: thumbFailed ? (p.annotatedId || null) : null, thumbId, annotatedStale: thumbFailed};
+    if(changedNow) upd.updatedAt = Date.now();
+    await db.doc("photos/"+p.id).update(upd);
+    if(changedNow) await touchSite();     // 안 바꾸고 '완료'만 눌렀을 때 '백업 필요'가 잘못 뜨지 않게
+    if(assets) old.forEach(id => assets.delete(id).catch(()=>{}));
+    nextSpace = space;
+    toast(thumbFailed ? "저장했어요. 미리보기 사진은 인터넷이 잘 될 때 다시 만들어요." : "저장했어요", thumbFailed ? 3500 : 2600); closeEditor();
+  }catch(e){
+    // 저장이 안 돼도 편집 화면에 갇히지 않게: 다시 시도하거나 그냥 닫을 수 있다
+    toast("", 1);
+    const r = await dialog({title:"저장하지 못했어요",
+      text: esc(writeErr(e) + " 그냥 닫으면 마지막으로 자동 저장된 내용까지만 남아요."),
+      ok:"다시 시도", cancel:"그냥 닫기"});
+    btn.disabled = false;
+    if(r !== null) return saveEditor();
+    closeEditor(); return;
+  }
+  btn.disabled = false;
+}
+$("#edSave").onclick = saveEditor;
+$("#edDel").onclick = async () => {
+  const p = ed.photo; if(!p) return;
+  const m = await dialog({title:`사진 ${numberOf(p.id)}번`, text: esc(`${p.space}${p.memo ? " · " + p.memo : ""}`), ok:"닫기", cancel:null, danger: canDelete ? "이 사진 삭제" : null});
+  if(m !== "danger") return;
+  if(!await confirmBox("사진 삭제", `사진 ${numberOf(p.id)}번과 그 위의 치수를 지울까요? 되돌릴 수 없어요.`)) return;
+  clearTimeout(autoT); autoT = null;
+  while(autoBusy) await sleep(50);
+  try{
+    await db.doc("photos/"+p.id).delete();
+    if(assets) for(const id of [p.assetId, p.annotatedId, p.thumbId].filter(Boolean)) assets.delete(id).catch(()=>{});
+    await touchSite(); toast("삭제했어요"); closeEditor();
+  }catch(e){ toast(writeErr(e)); }
+};
+
+/* ---------- export & backup ---------- */
+const byTime = list => [...list].sort((a,b) => (a.createdAt||0) - (b.createdAt||0));
+function textSummary(site = cur, list = photos){
+  const all = byTime(list), sp = spacesOf(site), num = p => p.no || all.indexOf(p) + 1;
+  const names = [...sp, ...[...new Set(all.map(p => p.space))].filter(x => !sp.includes(x))];
+  let out = `[실측] ${site.name}\n주소: ${site.address||"-"}\n실측일: ${site.date||"-"}${site.phone?"\n연락처: "+site.phone:""}${site.memo?"\n메모: "+site.memo:""}\n(치수 단위 mm)\n`;
+  names.forEach(n => {
+    const items = all.filter(p => p.space === n); if(!items.length) return;
+    out += `\n■ ${n} (사진 ${items.length}장)\n`;
+    items.forEach(p => {
+      dimsOf(p).forEach(a => out += `- ${a.label||"치수"}: ${a.v}${a.vs && a.vs.length > 1 ? ` [${a.vs.join("/")}, 차 ${spreadOf(a)}${spreadOf(a) >= SPREAD_WARN ? " 주의" : ""}]` : ""}${a.ref ? ` (${a.ref})` : ""} (사진 ${num(p)})\n`);
+      if(p.memo) out += `- 메모(사진 ${num(p)}): ${p.memo}\n`;
+    });
+  });
+  return out;
+}
+async function copyText(){
+  const t = textSummary();
+  try{ await navigator.clipboard.writeText(t); toast("복사했어요. 카톡이나 문자에 붙여넣기 하세요."); }
+  catch(e){ await dialog({title:"아래 글을 길게 눌러 복사하세요", fields:[{id:"t", label:"실측 내용", type:"textarea", value:t}], ok:"닫기", cancel:null}); }
+}
+/* 실측표 엑셀: 공간 순서대로 한 줄에 치수 하나, 숫자로 쓸 수 있는 치수는 숫자 칸으로 */
+const SHEET_HEAD = ["공간","항목","치수(mm)","기준","여러 점 측정","차이(mm)","사진번호","메모"];
+function sheetRows(site = cur, list = photos){
+  const all = byTime(list), sp = spacesOf(site), num = p => p.no || all.indexOf(p) + 1;
+  const names = [...sp, ...[...new Set(all.map(p => p.space))].filter(x => !sp.includes(x))];
+  const rows = [];
+  names.forEach(n => all.filter(p => p.space === n).forEach(p => {
+    dimsOf(p).forEach(a => {
+      const raw = String(a.v ?? "").replace(/,/g, "").trim(), v = Number(raw);
+      const multi = a.vs && a.vs.length > 1;
+      rows.push([n, a.label || "치수", raw !== "" && isFinite(v) ? v : a.v, a.ref || "", multi ? a.vs.join(" / ") : "", multi ? spreadOf(a) : "", num(p), ""]);
+    });
+    if(p.memo) rows.push([n, "메모", "", "", "", "", num(p), p.memo]);
+  }));
+  return rows;
+}
+function buildWorkbook(site, list){
+  const head = [["실측표"], ["현장", site.name || ""], ["주소", site.address || ""], ["실측일", site.date || ""], ["연락처", site.phone || ""], ["현장 메모", site.memo || ""], ["단위", "mm"], [], SHEET_HEAD];
+  const ws = XLSX.utils.aoa_to_sheet([...head, ...sheetRows(site, list)]);
+  ws["!cols"] = [{wch:12}, {wch:20}, {wch:11}, {wch:12}, {wch:20}, {wch:9}, {wch:9}, {wch:40}];
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "실측표");
+  const label = {done:"완료", na:"해당 없음", todo:"빠짐"};
+  const ck = [["공간","항목","종류","상태","치수(mm)"]];
+  checkSpaces(site, list).forEach(s => checkStatus(s, site, list).forEach(it =>
+    ck.push([s, it.n, it.t === "dim" ? "치수" : "확인", label[it.state], it.vals.map(d => d.a.v + (d.a.ref ? " " + d.a.ref : "")).join(", ")])));
+  const ws2 = XLSX.utils.aoa_to_sheet(ck);
+  ws2["!cols"] = [{wch:12}, {wch:24}, {wch:6}, {wch:10}, {wch:20}];
+  XLSX.utils.book_append_sheet(wb, ws2, "체크리스트");
+  return wb;
+}
+async function saveXlsx(){
+  const btn = $("#xlsx"); if(btn) btn.disabled = true;
+  try{
+    const data = XLSX.write(buildWorkbook(cur, photos), {bookType:"xlsx", type:"array"});
+    toast("저장 창이 뜨면 확인(저장)을 눌러 주세요", 0);
+    await downloads.save({filename:`실측표_${safeName(cur.name) || "현장"}_${cur.date || today()}.xlsx`, data:new Blob([data])});
+    toast("엑셀 파일을 저장했어요. " + WHERE_SAVED, 4000);
+    return true;
+  }catch(e){
+    toast(e && e.code === "declined" ? "저장을 취소했어요" : "엑셀 파일을 저장하지 못했어요. 엑셀에 붙여넣기 복사를 써 주세요.", 4000);
+    if(e && e.code !== "declined" && btn){ btn.id = "tsv"; btn.textContent = "엑셀에 붙여넣기 복사"; btn.onclick = copyTsv; }
+    return false;
+  }finally{ if(btn) btn.disabled = false; }
+}
+async function copyTsv(){
+  const t = [SHEET_HEAD, ...sheetRows()].map(r => r.map(v => String(v ?? "").replace(/[\t\n\r]+/g, " ")).join("\t")).join("\n");
+  try{ await navigator.clipboard.writeText(t); toast("복사했어요. 엑셀에서 칸 하나를 누르고 붙여넣기 하세요.", 3500); }
+  catch(e){ await dialog({title:"아래 글을 길게 눌러 복사하세요", fields:[{id:"t", label:"엑셀 붙여넣기용", type:"textarea", value:t}], ok:"닫기", cancel:null}); }
+}
+
+/* 사진을 길게 눌러 휴대폰 사진첩에 저장할 수 있게 한 장씩 보여 준다 */
+/* 치수가 그려진 사진: 합성본이 최신이면 그대로, 아니면 원본 위에 다시 그린다 */
+async function photoBlob(p){
+  if(p.annotatedId && !p.annotatedStale) return getBlob(p.annotatedId);
+  const orig = await getBlob(p.assetId);
+  if(!(p.ann || []).length) return orig;
+  const url = URL.createObjectURL(orig);
+  try{
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
+    const c = document.createElement("canvas"); c.width = img.naturalWidth; c.height = img.naturalHeight;
+    const ctx = c.getContext("2d"); ctx.drawImage(img, 0, 0); renderAnn(ctx, p.ann, c.width, c.height);
+    return await new Promise((res, rej) => c.toBlob(b => b ? res(b) : rej(new Error("load")), "image/jpeg", 0.88));
+  }finally{ URL.revokeObjectURL(url); }
+}
+const blobToDataUrl = b => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(r.error); r.readAsDataURL(b); });
+async function showGallery(onlyNew){
+  const unsaved = unsavedPhotos();
+  const all = onlyNew && unsaved.length ? [...unsaved].sort((a,b) => (a.createdAt||0) - (b.createdAt||0)) : ordered();
+  if(!all.length){ toast("저장할 사진이 없어요"); return; }
+  const ov = document.createElement("div");
+  ov.style.cssText = "position:fixed;inset:0;z-index:30;background:var(--paper);overflow:auto;padding:max(12px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(24px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))";
+  ov.innerHTML = `<div class="top" style="padding-top:0"><h1 style="font-size:20px">사진 갤러리에 저장</h1><button class="btn small" type="button" data-close>닫기</button></div>
+    <div class="stack" style="margin-top:12px">
+      <p class="notice" style="margin:0">사진을 <b>길게 눌러</b> "이미지 저장"이나 "사진에 추가"를 고르면 휴대폰 사진첩에 저장돼요. 치수가 그려진 사진으로 저장돼요.</p>
+      <div class="stack" id="galList"><p class="sub">사진 준비하는 중…</p></div>
+    </div>`;
+  document.body.appendChild(ov); document.body.classList.add("noscroll");
+  const closeOv = () => {
+    ov.remove(); document.body.classList.remove("noscroll");
+    if(view === "site" && cur) renderSite();
+    if(afterGallery){ const f = afterGallery; afterGallery = null; f(); }
+  };
+  ov.querySelector("[data-close]").onclick = closeOv;
+  const list = ov.querySelector("#galList"); list.innerHTML = "";
+  for(const p of all){
+    if(!ov.isConnected) return;
+    const src = await photoBlob(p).then(blobToDataUrl).catch(() => imgSrc(p.assetId));
+    const fig = document.createElement("figure"); fig.style.margin = "0";
+    fig.innerHTML = `<img alt="사진 ${numberOf(p.id)}" style="width:100%;border-radius:10px;display:block" src="${esc(src)}"><figcaption class="sub" style="margin-top:4px">사진 ${numberOf(p.id)} · ${esc(p.space)}${p.memo ? " · " + esc(p.memo) : ""}</figcaption>`;
+    list.appendChild(fig);
+  }
+  if(mode !== "local" || !ov.isConnected) return;
+  const done = document.createElement("button");
+  done.type = "button"; done.className = "btn primary"; done.style.minHeight = "56px";
+  done.textContent = "사진첩에 다 저장했어요";
+  done.onclick = async () => {
+    try{ await db.doc("sites/" + cur.id).update({galleryAt: Date.now()}); cur = {...cur, galleryAt: Date.now()}; toast("확인했어요. 새로 찍거나 고친 사진이 생기면 다시 알려 드려요.", 3500); }
+    catch(e){ toast(writeErr(e)); }
+    closeOv();
+  };
+  list.appendChild(done);
+}
+function getBlob(id){
+  if(String(id).startsWith("local_")) return localBlob(id).then(b => { if(!b) throw new Error("load"); return b; });
+  return fetch("/_blob/"+id).then(r => { if(!r.ok) throw new Error("load"); return r.blob(); }).catch(() => new Promise((res, rej) => {
+    const img = new Image(); img.onload = () => { const c = document.createElement("canvas"); c.width = img.naturalWidth; c.height = img.naturalHeight; c.getContext("2d").drawImage(img,0,0); c.toBlob(b => b ? res(b) : rej(new Error("load")), "image/jpeg", 0.9); };
+    img.onerror = () => rej(new Error("load")); img.src = imgSrc(id);
+  }));
+}
+const safeName = s => String(s||"").replace(/[\\/:*?"<>|\n\r]/g, "").trim();
+function needsBackup(s){ return !s.backedUpAt || (s.updatedAt||0) > s.backedUpAt; }
+function backupLabel(s){
+  if(!s.backedUpAt) return `<span class="pill warn">${W.pillNeed}</span>`;
+  const d = new Date(s.backedUpAt), md = (d.getMonth()+1)+"/"+d.getDate();
+  return needsBackup(s) ? `<span class="pill warn">${W.pillNew}</span>` : `<span class="pill ok">${W.pillOk} ${md}</span>`;
+}
+/* 현장 하나의 사진 + 실측표를 zip에 넣는다.
+   _data/<현장id>/ 에 현장·사진 정보(JSON)를 같이 넣어서, 이 파일을 사진첩의 '가져오기'로 그대로 되살릴 수 있게 한다 */
+async function addSiteToZip(zip, site, list, folder, progress){
+  const all = byTime(list), base = folder ? folder + "/" : "";
+  const csvRows = [["공간","항목","치수(mm)","기준","사진번호","메모"]];
+  const meta = [];
+  let missing = 0, bytes = 0;
+  const freePath = path => zip.file(path) ? path.replace(/\.jpg$/, "_" + Math.random().toString(36).slice(2, 6) + ".jpg") : path;
+  for(let i = 0; i < all.length; i++){
+    const p = all[i], n = String(p.no || i+1).padStart(2,"0");
+    if(progress) progress(i+1, all.length);
+    const hasAnn = (p.ann || []).length > 0;
+    let shown = null, orig = null;
+    try{ const b = await photoBlob(p); bytes += b.size; shown = freePath(`${base}사진/${n}_${safeName(p.space)}.jpg`); zip.file(shown, b); }catch(_){ missing++; }
+    if(hasAnn){ try{ const b = await getBlob(p.assetId); bytes += b.size; orig = freePath(`${base}원본/${n}_${safeName(p.space)}_원본.jpg`); zip.file(orig, b); }catch(_){ missing++; } }
+    else orig = shown;
+    meta.push({...p, _orig: orig});
+    dimsOf(p).forEach(a => csvRows.push([p.space, a.label||"치수", a.v, a.ref || "", p.no || i+1, ""]));
+    if(p.memo) csvRows.push([p.space, "메모", "", "", p.no || i+1, p.memo]);
+  }
+  zip.file(base + "실측표.csv", "﻿" + csvRows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(",")).join("\r\n"));
+  zip.file(base + "실측표.txt", textSummary(site, list));
+  if(window.XLSX) zip.file(base + "실측표.xlsx", XLSX.write(buildWorkbook(site, list), {bookType:"xlsx", type:"array"}));
+  zip.file(`${base}_data/${site.id}/site.json`, JSON.stringify({v:1, site:{...site, id:site.id}}));
+  zip.file(`${base}_data/${site.id}/photos.json`, JSON.stringify({v:1, photos:meta}));
+  return {missing, bytes};
+}
+/* 사진이 빠진 현장은 '완료'로 바꾸지 않고, 눌러서 닫는 안내창으로 확실히 알린다 */
+function missingAlert(missing, names){
+  return dialog({title: OFFLINE ? "사진 일부를 파일에 넣지 못했어요" : "사진 일부를 백업하지 못했어요",
+    text: esc(`사진 ${missing}장을 불러오지 못했어요${names && names.length ? ` (${names.join(", ")})` : ""}. 이 현장은 '${W.pillNeed}'으로 남겨 뒀어요. 다시 한 번 해 주세요.`),
+    ok:"알겠어요", cancel:null});
+}
+/* 오프라인 앱: 파일을 만든 뒤 카톡으로 보내는 순서를 알려 준다 */
+function sendGuide(filename){
+  return dialog({title:"보낼 파일을 만들었어요",
+    text:`<span class="sub">휴대폰 '다운로드' 폴더에 <b>${esc(filename)}</b> 파일로 저장됐어요. 이제 카톡으로 보내 주세요.</span>
+      <ol class="steps" style="margin-top:14px">
+        <li><span>카카오톡에서 <b>사장님 대화방</b>을 열어요.</span></li>
+        <li><span>입력창 왼쪽 <b>+</b> 버튼 → <b>파일</b>을 눌러요.</span></li>
+        <li><span><b>다운로드</b> 폴더에서 방금 만든 파일을 골라 보내요.</span></li>
+        <li><span>사장님이 받았다고 하면, 이 현장은 휴대폰에서 지워도 돼요.</span></li>
+      </ol>`,
+    ok:"알겠어요", cancel:null});
+}
+async function saveZip(zip, filename){
+  toast("파일 만드는 중…", 0);
+  const blob = await zip.generateAsync({type:"blob"});
+  if(!OFFLINE) toast("저장 창이 뜨면 확인(저장)을 눌러 주세요", 0);
+  await downloads.save({filename, data: blob});
+}
+async function markBackedUp(ids){
+  const now = Date.now();
+  for(const id of ids){ try{ await db.doc("sites/"+id).update({backedUpAt: now}); }catch(_){} }
+}
+function backupDoneMsg(missing){
+  return missing ? `백업했어요. 사진 ${missing}장은 불러오지 못해 빠졌어요.` : "백업했어요. " + WHERE_SAVED;
+}
+const WHERE_SAVED = /iPhone|iPad/i.test(navigator.userAgent) ? "'파일' 앱에 저장돼요."
+  : /Android/i.test(navigator.userAgent) ? "휴대폰 '다운로드' 폴더에 저장돼요." : "컴퓨터 '다운로드' 폴더에 저장돼요.";
+const failMsg = e => e && e.code === "declined" ? "취소했어요" : (OFFLINE ? "파일을 만들지 못했어요. 휴대폰 저장 공간을 확인하고 다시 해 주세요." : "백업하지 못했어요. 인터넷 연결을 확인하고 다시 해 주세요.");
+async function downloadZip(){
+  const btn = $("#zip"); if(btn) btn.disabled = true;
+  try{
+    const zip = new JSZip();
+    const {missing} = await addSiteToZip(zip, cur, photos, "", (i,n) => toast(`사진 모으는 중 ${i}/${n}`, 0));
+    const filename = `실측_${safeName(cur.name)||"현장"}_${cur.date||today()}.zip`;
+    await saveZip(zip, filename);
+    if(missing){ toast("", 1); await missingAlert(missing); }
+    else { await markBackedUp([cur.id]); if(OFFLINE){ toast("", 1); await sendGuide(filename); } else toast(backupDoneMsg(0), 4500); }
+  }catch(e){ toast(failMsg(e), 4000); }
+  finally{ if(btn) btn.disabled = false; }
+}
+async function backupAll(onlyNeeded){
+  const targets = sites.filter(s => !onlyNeeded || needsBackup(s));
+  if(!targets.length){ toast(OFFLINE ? "보낼 현장이 없어요." : "백업할 현장이 없어요. 모두 백업돼 있어요."); return; }
+  const btn = $("#backupBtn"); if(btn) btn.disabled = true;
+  try{
+    toast("사진 목록 불러오는 중…", 0);
+    const snap = await db.collection("photos").get();
+    const allPhotos = snap.docs.map(d => ({id:d.id, ...d.data()}));
+    // 한 파일이 너무 커지면 휴대폰이 멈추므로, 약 100MB마다 파일을 나눠 저장한다
+    const LIMIT = 100 * 1048576;
+    const prefix = OFFLINE ? "실측보내기" : "실측백업";
+    let zip = new JSZip(), inZip = [], bytes = 0, part = 1, missing = 0;
+    const badNames = [], names = [];
+    const flush = async () => {
+      if(!inZip.length) return;
+      const fn = `${prefix}_${today()}${part > 1 ? "_" + part : ""}.zip`; names.push(fn);
+      await saveZip(zip, fn);
+      await markBackedUp(inZip.filter(x => !x.missing).map(x => x.id));
+      zip = new JSZip(); inZip = []; bytes = 0; part++;
+    };
+    for(let k = 0; k < targets.length; k++){
+      const s = targets[k], list = allPhotos.filter(p => p.siteId === s.id);
+      const folder = [safeName(s.date), safeName(s.name), safeName(s.address)].filter(Boolean).join("_") || ("현장" + (k+1));
+      const r = await addSiteToZip(zip, s, list, folder, (i,n) => toast(`현장 ${k+1}/${targets.length} · 사진 ${i}/${n}`, 0));
+      inZip.push({id: s.id, missing: r.missing}); bytes += r.bytes;
+      if(r.missing){ missing += r.missing; badNames.push(s.name); }
+      if(bytes >= LIMIT && k < targets.length - 1){ await flush(); toast(`파일 ${part - 1}개 저장했어요. 다음 파일을 만드는 중…`, 0); }
+    }
+    await flush();
+    const files = part - 1;
+    if(missing){ toast("", 1); await missingAlert(missing, badNames); }
+    else if(OFFLINE){ toast("", 1); await sendGuide(names.join(", ")); }
+    else toast((files > 1 ? `백업 파일 ${files}개로 나눠 저장했어요. ` : "백업했어요. ") + WHERE_SAVED, 5000);
+  }catch(e){ toast(failMsg(e), 4000); }
+  finally{ if(btn) btn.disabled = false; }
+}
+
+/* ---------- 직원이 보낸 파일 가져오기 (사장님 사진첩) ---------- */
+async function importZip(file){
+  if(!file || !assets) return;
+  toast("파일 여는 중…", 0);
+  let nSites = 0, nPhotos = 0, skipped = 0, failed = 0;
+  try{
+    const zip = await JSZip.loadAsync(file);
+    const metas = zip.file(/(^|\/)_data\/[^/]+\/site\.json$/);
+    if(!metas.length){
+      toast("", 1);
+      await dialog({title:"가져올 수 없는 파일이에요", text: esc("실측 앱의 '사장님께 보낼 파일'이나 사진첩 백업 파일(ZIP)인지 확인해 주세요."), ok:"알겠어요", cancel:null});
+      return;
+    }
+    for(const mf of metas){
+      const dir = mf.name.replace(/site\.json$/, "");
+      const site = JSON.parse(await mf.async("string")).site;
+      const pf = zip.file(dir + "photos.json");
+      const plist = pf ? JSON.parse(await pf.async("string")).photos || [] : [];
+      const ex = await db.doc("sites/" + site.id).get();
+      const exSite = ex.exists ? ex.data() : null;
+      const exPhotos = (await db.collection("photos").where("siteId", "==", site.id).get()).docs.map(d => ({id: d.id, ...d.data()}));
+      for(let i = 0; i < plist.length; i++){
+        const p = plist[i];
+        toast(`${site.name || "현장"} 사진 가져오는 중 ${i+1}/${plist.length}`, 0);
+        const cp = exPhotos.find(x => x.id === p.id);
+        if(cp && (cp.updatedAt || 0) >= (p.updatedAt || 0)){ skipped++; continue; }
+        const f = p._orig && zip.file(p._orig);
+        if(!f){ failed++; continue; }
+        const blob = new Blob([await f.async("arraybuffer")], {type:"image/jpeg"});
+        const r = await assets.upload(blob, {type:"image/jpeg"});
+        const {_orig, id, ...rest} = p;
+        await db.doc("photos/" + p.id).set({...rest, siteId: site.id, assetId: r.id, annotatedId: null, thumbId: null, annotatedStale: (rest.ann || []).length > 0});
+        if(cp) for(const old of [cp.assetId, cp.annotatedId, cp.thumbId].filter(Boolean)) assets.delete(old).catch(() => {});
+        nPhotos++;
+      }
+      const {id, backedUpAt, galleryAt, ...sd} = site;
+      const keepCloud = exSite && (exSite.updatedAt || 0) > (sd.updatedAt || 0);
+      await db.doc("sites/" + site.id).set({...(keepCloud ? {...sd, ...exSite} : {...(exSite || {}), ...sd}), customSpaces: [...new Set([...(exSite && exSite.customSpaces || []), ...(sd.customSpaces || [])])], importedAt: Date.now(), updatedAt: Date.now()});
+      nSites++;
+    }
+    toast("", 1);
+    await dialog({title:"가져왔어요",
+      text: esc(`현장 ${nSites}곳, 사진 ${nPhotos}장을 가져왔어요.` + (skipped ? ` 이미 있던 사진 ${skipped}장은 건너뛰었어요.` : "") + (failed ? ` 사진 ${failed}장은 파일에 없어서 가져오지 못했어요.` : "")),
+      ok:"확인", cancel:null});
+  }catch(e){
+    toast("", 1);
+    await dialog({title:"다 가져오지 못했어요",
+      text: esc((nSites || nPhotos ? `현장 ${nSites}곳, 사진 ${nPhotos}장까지 가져왔어요. ` : "") + (e && e.code ? writeErr(e) : "파일을 열지 못했어요. 받은 ZIP 파일이 맞는지 확인해 주세요.") + " 같은 파일로 다시 가져오면 빠진 것만 이어서 가져와요."),
+      ok:"확인", cancel:null});
+  }
+}
+
+boot();
+})();
+</script>
+<script>
+if("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+</script>
+</body>
+</html>
