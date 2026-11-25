@@ -1,6 +1,17 @@
 {
   "v": 1,
-  "enforce": false,
+  "enforce": true,
   "maxOfflineDays": 7,
-  "users": []
+  "users": [
+    {
+      "name": "정세훈",
+      "hash": "f463af396bfd797279881a33d096e18b7298ea3a09c4cc3ae1551c11d9508874",
+      "active": true
+    },
+    {
+      "name": "이려황",
+      "hash": "cd23daa256d1ad64a4b8a981329806f39d0e05d73b85138da3ff225bee5d78f4",
+      "active": true
+    }
+  ]
 }
