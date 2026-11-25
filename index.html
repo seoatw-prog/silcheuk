@@ -117,6 +117,13 @@ button{cursor:pointer}
 .thumb:active{transform:scale(.96)}
 .thumb img{width:100%;height:100%;object-fit:cover;display:block}
 .thumb .no{position:absolute;left:7px;top:7px;background:rgba(40,28,18,.6);backdrop-filter:blur(4px);color:#fff;font-size:12px;font-weight:700;border-radius:8px;padding:1px 7px;font-variant-numeric:tabular-nums}
+.thumb .pick{position:absolute;right:7px;top:7px;width:26px;height:26px;border-radius:50%;border:2.5px solid #fff;background:rgba(40,28,18,.35);box-shadow:0 1px 4px rgba(0,0,0,.3);display:grid;place-items:center;color:#fff;font-size:15px;font-weight:700;line-height:1}
+.thumb.on{box-shadow:0 0 0 3px var(--accent),var(--shadow)}
+.thumb.on .pick{background:var(--accent);border-color:var(--accent)}
+.thumb.on img{opacity:.82}
+.sel-bar .in{grid-template-columns:auto 1fr}
+.sel-bar .cnt{font-weight:700;align-self:center;padding:0 4px;white-space:nowrap}
+.tool:disabled{opacity:.35}
 .thumb .dims{position:absolute;right:7px;bottom:7px;background:var(--mark);color:#111;font-size:12px;font-weight:700;border-radius:8px;padding:1px 7px}
 .empty{color:var(--muted);text-align:center;padding:32px 12px;border:1.5px dashed var(--line);border-radius:var(--r);background:color-mix(in srgb,var(--card) 50%,transparent)}
 table.m{width:100%;border-collapse:collapse;background:var(--card);border:0;border-radius:var(--r);overflow:hidden;font-variant-numeric:tabular-nums;box-shadow:var(--shadow)}
@@ -214,6 +221,53 @@ table.m tr:last-child td{border-bottom:0}
 @keyframes sheetUp{from{transform:translateY(40px);opacity:.6}to{transform:none;opacity:1}}
 @keyframes toastIn{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translateX(-50%)}}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+/* ---------- 휴대폰·태블릿 ---------- */
+:root{padding-top:0!important;padding-bottom:0!important}   /* 바깥 틀의 안전 영역 여백이 화면 안 여백과 겹쳐 위아래가 두 번 비지 않게 */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{overscroll-behavior-y:none}
+button,.chip,.tool,.thumb,.cl-row,.site{touch-action:manipulation;-webkit-user-select:none;user-select:none}
+#cv,.thumb img{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.field input.small-in{font-size:16px}   /* 아이폰은 16px보다 작은 입력칸을 누르면 화면을 확대해 버린다 */
+/* 키보드가 올라와도 입력 창이 가려지지 않게, 보이는 화면 높이에 맞춘다 (높이는 스크립트가 넣어 줌) */
+.dlg-back{top:var(--vv-top,0px);bottom:auto;height:var(--vv-h,100%)}
+.dlg{overscroll-behavior:contain}
+.ov{position:fixed;inset:0;background:var(--paper);overflow:auto;overscroll-behavior:contain;padding:max(12px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right),calc((100vw - 760px)/2)) max(24px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left),calc((100vw - 760px)/2))}
+.cl-cols,.tbl-cols{display:grid;gap:18px}
+.cl-row .go{font-size:12px;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:2px 9px;margin-left:6px;white-space:nowrap}
+.direct-tag{font-size:11px;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:6px;padding:0 5px;margin-left:4px;vertical-align:1px}
+.group .linkbtn{margin-top:2px}
+/* 태블릿·큰 화면: 넓게 쓰고, 현장 목록·체크리스트·실측표는 두 줄로 */
+@media (min-width:820px){
+  .wrap{max-width:1080px;padding-left:max(28px,env(safe-area-inset-left));padding-right:max(28px,env(safe-area-inset-right))}
+  .bar .in{max-width:1080px}
+  .list{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .list .empty{grid-column:1/-1}
+  .grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+  .cl-cols,.tbl-cols{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
+  .cl-v{max-width:22vw}
+  .gal-list{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .tool{min-width:66px;min-height:60px}
+}
+@media (min-width:1200px){.list{grid-template-columns:repeat(3,minmax(0,1fr))}}
+/* 휴대폰을 가로로 눕혔을 때: 높이가 낮으니 사진 편집 도구를 오른쪽 세로 줄로 옮겨 사진을 크게 */
+@media (orientation:landscape) and (max-height:560px){
+  #editor{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto minmax(0,1fr) auto;grid-template-areas:"top top" "stage tools" "bottom bottom"}
+  .ed-top{grid-area:top;padding-top:max(6px,env(safe-area-inset-top));padding-bottom:4px}
+  .ed-top .btn,.ed-top select{min-height:40px}
+  #edStage{grid-area:stage}
+  .hint{display:none}
+  .ed-tools{grid-area:tools;flex-direction:column;align-items:stretch;padding:4px max(8px,env(safe-area-inset-right)) 4px 6px;min-height:0;overflow:hidden}
+  .tools-scroll{flex-direction:column;overflow-x:hidden;overflow-y:auto;flex:1;min-height:0}
+  .tools-fixed{flex-direction:column;padding:6px 0 0;border-left:0;border-top:1px solid #3b3229}
+  .tool{min-height:46px;min-width:62px;font-size:11px}
+  .swatch{width:40px;height:40px;align-self:center}
+  .ed-bottom{grid-area:bottom;padding-top:4px}
+  .ed-bottom textarea{min-height:42px;padding:9px 12px}
+  .ed-bottom .btn.primary{min-height:42px}
+  .wrap{padding-bottom:110px}
+  .bar{padding-top:8px}
+  .bar .btn{min-height:48px}
+}
 </style>
 </head>
 <body>
@@ -264,8 +318,8 @@ const SKETCH = "평면 스케치";
 const SPREAD_WARN = 10;   // 여러 점으로 잰 값의 차이가 이 mm 이상이면 기울어짐 경고
 const CANVAS_FONT = '"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif';
 const HINTS = {
-  dim: "치수선: 재고 싶은 곳을 끝에서 끝까지 그어 주세요. 두 손가락으로 벌리면 확대돼요.",
-  line: "직선: 벽이나 가구 선을 그어요. 수평·수직은 자동으로 맞춰져요. 두 손가락으로 확대할 수 있어요.",
+  dim: "치수선: 재고 싶은 곳을 끝에서 끝까지 그어 주세요. 선 끝 동그라미를 끌면 위치를 고칠 수 있어요. 두 손가락으로 벌리면 확대돼요.",
+  line: "직선: 벽이나 가구 선을 그어요. 수평·수직은 자동으로 맞춰져요. 선 끝 동그라미를 끌면 옮겨져요.",
   text: "글자: 글자를 넣을 곳을 눌러 주세요.",
   pen: "펜: 자유롭게 표시해 주세요 (동그라미, 화살표 등).",
   erase: "지우기: 지울 선이나 글자를 눌러 주세요."
@@ -302,6 +356,7 @@ let db = null, assets = null, downloads = null;
 /* canDelete: 현장·사진 삭제 버튼은 사장님(주인)에게만 보인다. waitInvite: 로그인은 했지만 아직 저장 권한을 못 받은 직원 */
 let canDelete = true, waitInvite = false;
 let sites = [], photos = [], cur = null, unsubPhotos = null;
+let pick = null;   // 여러 장 고르는 중이면 고른 사진 id 묶음(Set)
 let view = "home", tab = "photos", nextSpace = "거실", query = "", loaded = false;
 const localUrls = new Map();
 let mode = "cloud", showAllSpaces = false, storageUse = 0;
@@ -324,6 +379,7 @@ const ICON = {
   line: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 20L20 4"/></svg>',
   fit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>',
   undo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7H4v5"/><path d="M4 12a8 8 0 1 1 2.3 5.7"/></svg>',
+  redo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h5v5"/><path d="M20 12a8 8 0 1 0-2.3 5.7"/></svg>',
   edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l4-1 11-11-3-3L5 16z"/></svg>'
 };
 
@@ -562,17 +618,29 @@ function fail(msg, help){
 function render(){
   if(view === "site" && cur) renderSite(); else renderHome();
 }
-function renderHome(){
-  view = "home";
+function siteListHtml(){
   const q = query.toLowerCase();
   const list = sites.filter(s => !q || (s.name+" "+(s.address||"")+" "+(s.phone||"")).toLowerCase().includes(q));
+  return list.map(s => `
+      <button class="site" type="button" data-site="${esc(s.id)}">
+        <b>${esc(s.name)}</b><span class="date">${esc(s.date||"")}</span>
+        <span class="sub">${esc(s.address||"주소 없음")}</span>
+        ${s.finishedAt || downloads ? `<span style="grid-column:1;display:flex;gap:6px;flex-wrap:wrap">${finishPill(s)}${downloads ? backupLabel(s) : ""}</span>` : ""}
+      </button>`).join("") || `<p class="empty">찾는 현장이 없어요.</p>`;
+}
+const bindSiteList = () => app.querySelectorAll("[data-site]").forEach(b => b.onclick = () => openSite(b.dataset.site));
+function renderHome(){
+  view = "home";
   app.innerHTML = `
   <div class="top"><h1>현장 실측 사진첩</h1></div>
   <div class="stack" style="margin-top:12px">
     <button class="btn primary" id="newSite" type="button" style="min-height:56px;font-size:17px">${ICON.plus} 새 현장 추가</button>
     ${!assets ? `<p class="notice">아직 사진을 올릴 권한이 없어요. 사장님께 이 사진첩에 <b>초대</b>해 달라고 말씀해 주세요. 지금은 보기만 가능해요.</p>`:""}
     ${waitInvite ? `<p class="notice" style="margin:0"><b>아직 사장님 사진첩에 초대되지 않았어요</b><br>그동안은 이 휴대폰에 저장돼요. 초대를 받은 뒤 다시 열면 <b>올리기</b> 버튼이 나와서 사장님 사진첩으로 옮길 수 있어요.</p>` : ""}
-    ${OFFLINE ? `<p class="notice" style="margin:0;background:var(--accent-soft)"><b>인터넷 없이도 쓸 수 있어요</b><br>찍은 사진과 치수는 이 휴대폰에 저장돼요. 현장이 끝나면 <b>사장님께 보내기</b>를 꼭 해 주세요.${storageUse ? `<br><span class="sub">이 앱이 휴대폰에서 쓰는 공간: 약 ${Math.max(1, Math.round(storageUse / 1048576))}MB</span>` : ""}</p>` : ""}
+    ${OFFLINE ? `<p class="notice" style="margin:0;background:var(--accent-soft)"><b>인터넷 없이도 쓸 수 있어요</b><br>찍은 사진과 치수는 이 휴대폰에 저장돼요. 현장이 끝나면 <b>사장님께 보내기</b>를 꼭 해 주세요.${storageUse ? `<br><span class="sub">이 앱이 휴대폰에서 쓰는 공간: 약 ${Math.max(1, Math.round(storageUse / 1048576))}MB</span>` : ""}</p>
+    <div class="backup"><div><b>찍은 사진 휴대폰 갤러리에도 저장 · ${autoGallery ? "켜짐" : "꺼짐"}</b>
+      <div class="sub">${autoGallery ? "사진을 찍으면 원본이 갤러리 'Download' 앨범에 바로 저장돼요." : "켜면 사진을 찍을 때마다 원본이 갤러리에도 저장돼요."}</div></div>
+      <button class="btn small" id="autoGal" type="button">${autoGallery ? "끄기" : "켜기"}</button></div>` : ""}
     ${mode === "local" && !OFFLINE ? `<p class="notice" style="margin:0"><b>휴대폰 저장 모드</b><br>지금은 이 휴대폰 안에만 저장돼요. Claude 앱을 지우거나 앱 데이터를 지우면 사진도 같이 사라져요. 현장이 끝나면 <b>현장 마무리</b>로 사진첩에 옮겨 두세요.${storageUse ? `<br><span class="sub">이 툴이 휴대폰에서 쓰는 공간: 약 ${Math.max(1, Math.round(storageUse / 1048576))}MB</span>` : ""}</p>` : ""}
     ${mode === "cloud" && pendingLocal && assets ? `<div class="backup due"><div><b>이 기기에만 있는 현장 ${pendingLocal.sites}곳 · 사진 ${pendingLocal.photos}장</b>
       <div class="sub">클라우드 저장소로 올려 두면 다른 기기에서도 보고, Claude가 정리할 수 있어요.</div></div>
@@ -585,18 +653,13 @@ function renderHome(){
         ${n ? `<button class="btn primary" id="backupBtn" type="button">${W.all}</button>` : `<button class="btn small" id="backupAllBtn" type="button">${W.again}</button>`}
       </div>`; })() : ""}
     ${sites.length ? `<input class="search" id="q" type="search" placeholder="고객 이름이나 주소로 찾기" value="${esc(query)}">` : ""}
-    ${sites.length ? `<div class="list">${list.map(s => `
-      <button class="site" type="button" data-site="${esc(s.id)}">
-        <b>${esc(s.name)}</b><span class="date">${esc(s.date||"")}</span>
-        <span class="sub">${esc(s.address||"주소 없음")}</span>
-        ${s.finishedAt || downloads ? `<span style="grid-column:1;display:flex;gap:6px;flex-wrap:wrap">${finishPill(s)}${downloads ? backupLabel(s) : ""}</span>` : ""}
-      </button>`).join("") || `<p class="empty">찾는 현장이 없어요.</p>`}</div>`
+    ${sites.length ? `<div class="list">${siteListHtml()}</div>`
     : `<div class="notice stack" style="background:var(--card);box-shadow:var(--shadow)">
         <h2 style="font-size:18px">이렇게 쓰시면 돼요</h2>
         <ol class="steps">
           <li><span><b>새 현장 추가</b>를 눌러 고객 이름과 주소를 적어요.</span></li>
           <li><span>공간(거실·주방…)을 고르고 <b>사진 찍기</b>를 눌러요.</span></li>
-          <li><span>찍은 사진 위에 손가락으로 선을 긋고 <b>치수</b>를 적어요.</span></li>
+          <li><span>찍은 사진 위에 손가락으로 선을 긋고 <b>치수</b>를 적어요. 천장고처럼 사진이 필요 없는 치수는 <b>체크리스트</b>에서 항목을 눌러 숫자만 적어도 돼요.</span></li>
           <li><span><b>실측표</b> 탭에 치수가 공간별로 자동 정리돼요.</span></li>
         </ol>
       </div>`}
@@ -605,10 +668,12 @@ function renderHome(){
   $("#newSite").onclick = newSite;
   const sy = $("#syncBtn"); if(sy) sy.onclick = syncLocal;
   const ib = $("#importBtn"); if(ib) ib.onclick = () => $("#fileZip").click();
+  const ag = $("#autoGal"); if(ag) ag.onclick = () => { setAutoGallery(!autoGallery); renderHome(); toast(autoGallery ? "이제 찍은 사진이 갤러리에도 저장돼요" : "이제 사진은 이 앱 안에만 저장돼요"); };
   const bb = $("#backupBtn"); if(bb) bb.onclick = () => backupAll(true);
   const ba = $("#backupAllBtn"); if(ba) ba.onclick = () => backupAll(false);
-  const qi = $("#q"); if(qi) qi.oninput = e => { query = e.target.value; const pos = e.target.selectionStart; renderHome(); const n = $("#q"); n.focus(); n.setSelectionRange(pos,pos); };
-  app.querySelectorAll("[data-site]").forEach(b => b.onclick = () => openSite(b.dataset.site));
+  // 검색창은 그대로 두고 목록만 바꾼다 (검색창을 새로 만들면 한글 조합이 끊겨 'ㅂㅏㄱ'처럼 들어감)
+  const qi = $("#q"); if(qi) qi.oninput = e => { query = e.target.value; const l = app.querySelector(".list"); if(l){ l.innerHTML = siteListHtml(); bindSiteList(); } };
+  bindSiteList();
 }
 
 function spacesOf(site){ return [...SPACES.filter(s => s !== "기타"), ...(site.customSpaces||[]), "기타"]; }
@@ -629,6 +694,17 @@ async function migrateNumbers(siteId){
 /* 휴대폰 저장 모드: 사진첩에 아직 안 옮긴 사진 (찍거나 고친 뒤로 사진첩 저장을 안 한 것) */
 const unsavedPhotos = () => mode === "local" && !OFFLINE && cur ? photos.filter(p => (p.updatedAt || p.createdAt || 0) > (cur.galleryAt || 0)) : [];
 function dimsOf(p){ return (p.ann||[]).filter(a => a.t === "dim"); }
+/* 사진 없이 체크리스트에서 바로 적은 치수: 현장 문서의 direct에 {"공간|항목": {v, vs, ref, at}} 로 저장 */
+const directOf = (site = cur) => (site && site.direct) || {};
+function directRows(site = cur){
+  return Object.entries(directOf(site)).map(([k, d]) => {
+    const i = k.indexOf("|"), n = k.slice(i + 1);
+    return {space: k.slice(0, i), n, key: k, a: {t:"dim", label: n, v: d.v, vs: d.vs || null, ref: d.ref || ""}};
+  });
+}
+const directIn = (space, site = cur) => directRows(site).filter(r => r.space === space);
+/* 이 공간에 사진이나 바로 적은 치수가 하나라도 있는지 (빠진 항목 계산 대상) */
+const spaceUsed = s => photos.some(p => p.space === s) || directIn(s).length > 0;
 
 function renderSite(){
   const s = cur, sp = spacesOf(s), all = ordered();
@@ -667,7 +743,10 @@ function renderSite(){
     <div id="tabBody" class="stack"></div>
     ${canDelete ? `<button class="btn danger" id="delSite" type="button" style="margin-top:12px">${OFFLINE && !needsBackup(s) ? "보낸 현장 이 휴대폰에서 지우기" : "이 현장 삭제"}</button>` : ""}
   </div>
-  ${assets ? `<div class="bar"><div class="in">
+  ${assets && pick ? `<div class="bar sel-bar"><div class="in">
+    <button class="btn" id="pickCancel" type="button">취소</button>
+    <button class="btn primary" id="pickMove" type="button" ${pick.size ? "" : "disabled"}>${pick.size ? pick.size + "장 공간 바꾸기" : "바꿀 사진을 눌러 고르세요"}</button>
+  </div></div>` : assets ? `<div class="bar"><div class="in">
     <button class="btn primary" id="shoot" type="button">${ICON.cam} ${esc(nextSpace)} 사진 찍기</button>
     <button class="btn" id="album" type="button" aria-label="앨범에서 고르기">${ICON.album} 앨범</button>
   </div></div>`:""}`;
@@ -686,20 +765,30 @@ function renderSite(){
   });
   $("#addSpace").onclick = addSpace;
   const ds = $("#delSite"); if(ds) ds.onclick = deleteSite;
-  app.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => { tab = b.dataset.tab; renderSite(); });
-  if(assets){ $("#shoot").onclick = () => $("#fileCam").click(); $("#album").onclick = () => $("#fileAlbum").click(); }
+  app.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => { tab = b.dataset.tab; pick = null; renderSite(); });
+  if(pick){ $("#pickCancel").onclick = () => { pick = null; renderSite(); }; $("#pickMove").onclick = movePicked; }
+  else if(assets){ $("#shoot").onclick = () => $("#fileCam").click(); $("#album").onclick = () => $("#fileAlbum").click(); }
   const body = $("#tabBody");
   if(tab === "photos"){
-    body.innerHTML = (assets ? `<button class="btn" id="addSketch" type="button">${ICON.line} 평면 스케치 추가 <span class="sub" style="font-weight:400">모눈종이에 평면을 그려요</span></button>` : "") +
+    if(pick) pick = new Set([...pick].filter(id => all.some(p => p.id === id)));
+    body.innerHTML = (assets && pick ? `<div class="notice" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span style="flex:1;min-width:180px"><b>공간을 바꿀 사진을 눌러 고르세요</b><br><span class="sub">다 고르면 아래 <b>공간 바꾸기</b>를 눌러요.</span></span></div>`
+      : assets ? `<button class="btn" id="addSketch" type="button">${ICON.line} 평면 스케치 추가 <span class="sub" style="font-weight:400">모눈종이에 평면을 그려요</span></button>` +
+        (all.length > 1 ? `<button class="btn ghost small" id="pickStart" type="button" style="justify-self:start">여러 장 골라서 공간 바꾸기</button>` : "") : "") +
       (groups.length ? groups.map(g => `
-      <section class="group"><h3>${esc(g.n)} <span class="sub">${g.items.length}장</span></h3>
+      <section class="group"><h3>${esc(g.n)} <span class="sub">${g.items.length}장</span>${pick ? `<button type="button" class="linkbtn" data-pickall="${esc(g.n)}" style="margin-left:auto;padding:0;min-height:0">${g.items.every(p => pick.has(p.id)) ? "모두 빼기" : "모두 고르기"}</button>` : ""}</h3>
       <div class="grid">${g.items.map(p => `
-        <button type="button" class="thumb" data-photo="${esc(p.id)}" aria-label="사진 ${numberOf(p.id)} 열기">
+        <button type="button" class="thumb${pick && pick.has(p.id) ? " on" : ""}" data-photo="${esc(p.id)}" aria-label="사진 ${numberOf(p.id)} ${pick ? "고르기" : "열기"}"${pick ? ` aria-pressed="${pick.has(p.id)}"` : ""}>
           <img loading="lazy" alt="" src="${esc(imgSrc(p.annotatedStale ? p.assetId : (p.thumbId || p.annotatedId || p.assetId)))}">
-          <span class="no">${numberOf(p.id)}</span>${dimsOf(p).length?`<span class="dims">치수 ${dimsOf(p).length}</span>`:""}
+          <span class="no">${numberOf(p.id)}</span>${pick ? `<span class="pick">${pick.has(p.id) ? "✓" : ""}</span>` : ""}${dimsOf(p).length?`<span class="dims">치수 ${dimsOf(p).length}</span>`:""}
         </button>`).join("")}</div></section>`).join("")
       : `<p class="empty">아직 사진이 없어요.<br>아래 <b>사진 찍기</b>를 눌러 시작하세요.</p>`);
-    body.querySelectorAll("[data-photo]").forEach(b => b.onclick = () => { const p = photos.find(x => x.id === b.dataset.photo); if(p) openEditor(p); });
+    body.querySelectorAll("[data-photo]").forEach(b => b.onclick = () => {
+      if(pick){ const id = b.dataset.photo; pick.has(id) ? pick.delete(id) : pick.add(id); const y = window.scrollY; renderSite(); window.scrollTo(0, y); return; }
+      const p = photos.find(x => x.id === b.dataset.photo); if(p) openEditor(p); });
+    body.querySelectorAll("[data-pickall]").forEach(b => b.onclick = () => {
+      const ids = all.filter(p => p.space === b.dataset.pickall).map(p => p.id), on = ids.every(id => pick.has(id));
+      ids.forEach(id => on ? pick.delete(id) : pick.add(id)); const y = window.scrollY; renderSite(); window.scrollTo(0, y); });
+    const ps = $("#pickStart"); if(ps) ps.onclick = () => { pick = new Set(); renderSite(); };
     const sk = $("#addSketch"); if(sk) sk.onclick = addSketch;
   } else if(tab === "check"){
     body.innerHTML = checklistHtml();
@@ -712,15 +801,44 @@ function renderSite(){
         ${downloads && window.XLSX ? `<button class="btn" id="xlsx" type="button">엑셀 파일 저장</button>` : `<button class="btn" id="tsv" type="button">엑셀에 붙여넣기 복사</button>`}
         ${downloads && window.JSZip ? `<button class="btn" id="zip" type="button">${W.one}</button>`:""}
       </div>
-      <p class="sub" style="margin:0">치수 단위는 mm예요. 치수는 사진 위에 그은 선에서 자동으로 모여요.</p>`;
+      <p class="sub" style="margin:0">치수 단위는 mm예요. 사진 위에 그은 치수선과 체크리스트에서 바로 적은 치수(<span class="direct-tag">직접</span>)가 자동으로 모여요.</p>`;
     $("#copyTxt").onclick = copyText;
     $("#gallery").onclick = () => showGallery(false);
     const xb = $("#xlsx"); if(xb) xb.onclick = saveXlsx;
     const tb = $("#tsv"); if(tb) tb.onclick = copyTsv;
     const z = $("#zip"); if(z) z.onclick = downloadZip;
     body.querySelectorAll("[data-photo]").forEach(b => b.onclick = () => { const p = photos.find(x => x.id === b.dataset.photo); if(p) openEditor(p); });
+    body.querySelectorAll("[data-direct]").forEach(b => b.onclick = () => { const k = b.dataset.direct, i = k.indexOf("|"); directEdit(k.slice(0, i), k.slice(i + 1)); });
   }
   if(finishOv) renderFinish();
+}
+
+/* 고른 사진들의 공간을 한 번에 바꾼다 (사진 번호·치수·메모는 그대로) */
+async function movePicked(){
+  if(!pick || !pick.size) return;
+  const list = photos.filter(p => pick.has(p.id)), sp = spacesOf(cur);
+  const r = await new Promise(resolve => {
+    const back = document.createElement("div"); back.className = "dlg-back";
+    back.innerHTML = `<div class="dlg" role="dialog" aria-modal="true" aria-label="공간 바꾸기">
+      <h2>사진 ${list.length}장을 어느 공간으로 옮길까요?</h2>
+      <div class="chips" style="flex-wrap:wrap;overflow:visible">${sp.map(n => `<button type="button" class="chip" data-to="${esc(n)}" style="background:var(--paper);box-shadow:none">${esc(n)}</button>`).join("")}</div>
+      <div class="actions"><button type="button" class="btn wide" data-a="cancel">취소</button></div></div>`;
+    document.body.appendChild(back);
+    const done = v => { back.remove(); resolve(v); };
+    back.addEventListener("click", e => { const c = e.target.closest("[data-to]"); if(c) return done(c.dataset.to); if(e.target.closest("[data-a]") || e.target === back) done(null); });
+  });
+  if(!r) return;
+  const todo = list.filter(p => p.space !== r);
+  if(!todo.length){ toast(`이미 모두 ${r} 사진이에요`); return; }
+  const btn = $("#pickMove"); if(btn) btn.disabled = true;
+  let ok = 0;
+  try{
+    const t = Date.now();
+    for(const p of todo){ await db.doc("photos/" + p.id).update({space: r, updatedAt: t}); p.space = r; p.updatedAt = t; ok++; }
+    await touchSite();
+    pick = null; nextSpace = sp.includes(r) ? r : nextSpace;
+    toast(`사진 ${ok}장을 ${r}(으)로 옮겼어요`); renderSite();
+  }catch(e){ toast((ok ? `${ok}장만 옮겼어요. ` : "") + writeErr(e), 4000); if(btn) btn.disabled = false; renderSite(); }
 }
 
 /* ---------- 현장 마무리: 빠진 항목 → 사진 지키기 → 실측표 보내기 → 마무리 기록 ---------- */
@@ -735,7 +853,7 @@ function openFinish(){
   finishSent = {text:false, excel:false};
   if(!finishOv){
     finishOv = document.createElement("div");
-    finishOv.style.cssText = "position:fixed;inset:0;z-index:28;background:var(--paper);overflow:auto;padding:max(12px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(24px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))";
+    finishOv.className = "ov"; finishOv.style.zIndex = "28";
     finishOv.setAttribute("role", "dialog"); finishOv.setAttribute("aria-label", "현장 마무리");
     document.body.appendChild(finishOv);
   }
@@ -749,7 +867,7 @@ function closeFinish(){
 function renderFinish(){
   if(!finishOv || !cur) return;
   document.body.classList.add("noscroll");
-  const spaces = checkSpaces().filter(s => photos.some(p => p.space === s));
+  const spaces = checkSpaces().filter(spaceUsed);
   const missing = spaces.map(s => ({s, items: checkStatus(s).filter(x => x.state === "todo")})).filter(x => x.items.length);
   const mCount = missing.reduce((n, x) => n + x.items.length, 0);
   const unsaved = unsavedPhotos().length;
@@ -760,9 +878,10 @@ function renderFinish(){
     ? `<div class="miss-list">${missing.map(x => `<span><b>${esc(x.s)}</b> ${esc(x.items.map(i => i.n).join(", "))}</span>`).join("")}</div>
        <p class="sub" style="margin:0">현장을 떠나면 다시 잴 수 없어요. 잴 필요가 없는 항목은 체크리스트에서 '해당 없음'으로 바꾸세요.</p>
        <button class="btn" type="button" data-f="check">체크리스트 열기 (빠짐 ${mCount})</button>`
-    : `<p class="sub" style="margin:0">${photos.length ? "사진 찍은 공간의 항목을 모두 쟀거나 '해당 없음'으로 표시했어요." : "아직 찍은 사진이 없어요."}</p>`)
+    : `<p class="sub" style="margin:0">${spaces.length ? "잰 공간의 항목을 모두 쟀거나 '해당 없음'으로 표시했어요." : "아직 찍은 사진이나 적은 치수가 없어요."}</p>`)
     + (() => {
-      const tilted = photos.flatMap(p => dimsOf(p).filter(a => spreadOf(a) >= SPREAD_WARN).map(a => `${esc(p.space)} ${esc(a.label || "치수")} (차 ${spreadOf(a)}mm)`));
+      const tilted = [...photos.flatMap(p => dimsOf(p).filter(a => spreadOf(a) >= SPREAD_WARN).map(a => `${esc(p.space)} ${esc(a.label || "치수")} (차 ${spreadOf(a)}mm)`)),
+        ...directRows().filter(r => spreadOf(r.a) >= SPREAD_WARN).map(r => `${esc(r.space)} ${esc(r.n)} (차 ${spreadOf(r.a)}mm)`)];
       return tilted.length ? `<p class="notice" style="margin:0;font-size:14px"><b>기울어짐 주의</b> ${tilted.join(", ")}<br>붙박이 가구는 가장 작은 값으로 제작하고, 시공팀에 꼭 알려 주세요.</p>` : "";
     })();
 
@@ -819,61 +938,103 @@ function renderFinish(){
 /* ---------- 체크리스트: 치수선에 붙인 항목 이름으로 자동 체크, 나머지는 눌러서 확인/해당 없음 ---------- */
 function checkStatus(space, site = cur, list = photos){
   const dims = list.filter(p => p.space === space).flatMap(p => dimsOf(p).map(a => ({a, p})));
-  const marks = (site && site.checks) || {};
-  return itemsOf(space).map(it => {
+  const marks = (site && site.checks) || {}, dir = directOf(site);
+  const dval = (n, d) => ({a: {t:"dim", label: n, v: d.v, vs: d.vs || null, ref: d.ref || ""}, p: null});
+  const base = itemsOf(space).map(it => {
     const key = space + "|" + it.n, m = marks[key];
     const vals = it.t === "dim" ? dims.filter(d => (d.a.label || "").trim() === it.n) : [];
+    if(it.t === "dim" && dir[key]) vals.unshift(dval(it.n, dir[key]));
     const state = vals.length || m === "ok" ? "done" : m === "na" ? "na" : "todo";
     return {...it, key, state, vals};
   });
+  // 목록에 없는 이름으로 바로 적은 치수도 체크리스트 끝에 보여 준다
+  const names = new Set(base.map(x => x.n));
+  const extra = Object.keys(dir).filter(k => k.startsWith(space + "|") && !names.has(k.slice(space.length + 1)))
+    .map(k => { const n = k.slice(space.length + 1); return {n, t:"dim", key:k, state:"done", extra:true, vals:[dval(n, dir[k])]}; });
+  return [...base, ...extra];
 }
 function checkSpaces(site = cur, list = photos, all = false){
-  const sp = spacesOf(site), used = new Set([...list.map(p => p.space), ...Object.keys(site.checks || {}).map(k => k.split("|")[0])]);
+  const sp = spacesOf(site), used = new Set([...list.map(p => p.space), ...Object.keys(site.checks || {}).map(k => k.split("|")[0]), ...Object.keys(site.direct || {}).map(k => k.split("|")[0])]);
   if(site === cur && view === "site") used.add(nextSpace);
   const extra = [...used].filter(x => !sp.includes(x));
   return (all ? [...sp, ...extra] : [...sp.filter(s => used.has(s)), ...extra]).filter(s => s !== SKETCH);
 }
-const missingCount = () => cur ? checkSpaces().filter(s => photos.some(p => p.space === s)).reduce((n, s) => n + checkStatus(s).filter(x => x.state === "todo").length, 0) : 0;
+const missingCount = () => cur ? checkSpaces().filter(spaceUsed).reduce((n, s) => n + checkStatus(s).filter(x => x.state === "todo").length, 0) : 0;
 function checklistHtml(){
   const list = checkSpaces(cur, photos, showAllSpaces);
-  return list.map(s => {
+  return `<div class="cl-cols">` + list.map(s => {
     const st = checkStatus(s), done = st.filter(x => x.state !== "todo").length;
     return `<section class="group"><h3>${esc(s)} <span class="sub">${done}/${st.length}</span></h3>
-      <div class="cl">${st.map(it => `<button type="button" class="cl-row ${it.state}" data-key="${esc(it.key)}" data-type="${it.t}" ${it.vals.length ? `data-photo-of="${esc(it.vals[0].p.id)}"` : ""}>
+      <div class="cl">${st.map(it => { const ph = it.vals.find(d => d.p); return `<button type="button" class="cl-row ${it.state}" data-key="${esc(it.key)}" data-type="${it.t}" ${ph ? `data-photo-of="${esc(ph.p.id)}"` : ""}>
         <span class="cl-ic" aria-hidden="true">${it.state === "done" ? "✓" : it.state === "na" ? "–" : ""}</span>
         <span class="cl-n">${esc(it.n)}${it.t === "check" ? ` <span class="sub">확인</span>` : ""}</span>
-        <span class="cl-v">${it.vals.length ? it.vals.map(d => esc(d.a.v) + (spreadOf(d.a) >= SPREAD_WARN ? ` <small style="color:var(--danger)">차${spreadOf(d.a)}</small>` : "") + (d.a.ref ? ` <small>${esc(d.a.ref)}</small>` : "")).join(", ")
-          : it.state === "na" ? "해당 없음" : it.state === "done" ? "확인함" : it.t === "dim" ? "안 잼" : "안 함"}</span>
-      </button>`).join("")}</div></section>`;
-  }).join("") + `
-    <button class="btn" id="allSpaces" type="button">${showAllSpaces ? "사진 있는 공간만 보기" : "모든 공간 보기"}</button>
-    <p class="sub" style="margin:0">치수선을 그을 때 항목 이름을 고르면 자동으로 체크돼요. 잴 필요 없는 항목은 눌러서 '해당 없음'으로 바꾸세요. 확인 항목은 누를 때마다 확인함 → 해당 없음 → 안 함으로 바뀌어요.</p>`;
+        <span class="cl-v">${it.vals.length ? it.vals.map(d => esc(d.a.v) + (d.p ? "" : `<span class="direct-tag">직접</span>`) + (spreadOf(d.a) >= SPREAD_WARN ? ` <small style="color:var(--danger)">차${spreadOf(d.a)}</small>` : "") + (d.a.ref ? ` <small>${esc(d.a.ref)}</small>` : "")).join(", ")
+          : it.state === "na" ? "해당 없음" : it.state === "done" ? "확인함" : it.t === "dim" ? `안 잼<span class="go">적기</span>` : "안 함"}</span>
+      </button>`; }).join("")}</div>
+      <button type="button" class="linkbtn" data-direct-space="${esc(s)}">+ ${esc(s)}에 다른 치수 바로 적기</button></section>`;
+  }).join("") + `</div>
+    <button class="btn" id="allSpaces" type="button">${showAllSpaces ? "잰 공간만 보기" : "모든 공간 보기"}</button>
+    <p class="sub" style="margin:0">치수 항목을 누르면 <b>사진 없이 숫자만</b> 바로 적을 수 있어요. 같은 창에서 '해당 없음'으로도 바꿀 수 있어요. 사진 위에 치수선을 그을 때 항목 이름을 고르면 자동으로 체크돼요. 확인 항목은 누를 때마다 확인함 → 해당 없음 → 안 함으로 바뀌어요.</p>`;
 }
 function bindChecklist(body){
   $("#allSpaces").onclick = () => { showAllSpaces = !showAllSpaces; renderSite(); };
+  body.querySelectorAll("[data-direct-space]").forEach(b => b.onclick = () => directEdit(b.dataset.directSpace, null));
   body.querySelectorAll(".cl-row").forEach(b => b.onclick = async () => {
     if(b.dataset.photoOf){ const p = photos.find(x => x.id === b.dataset.photoOf); if(p) openEditor(p); return; }
     const checks = {...(cur.checks || {})}, k = b.dataset.key, now = checks[k];
-    if(b.dataset.type === "dim") checks[k] = now === "na" ? null : "na";
-    else checks[k] = !now ? "ok" : now === "ok" ? "na" : null;
+    if(b.dataset.type === "dim"){ const i = k.indexOf("|"); return directEdit(k.slice(0, i), k.slice(i + 1)); }
+    checks[k] = !now ? "ok" : now === "ok" ? "na" : null;
     if(!checks[k]) delete checks[k];
     cur = {...cur, checks}; renderSite();
     try{ await db.doc("sites/" + cur.id).update({checks, updatedAt: Date.now()}); }catch(e){ toast(writeErr(e)); }
   });
 }
+/* 체크리스트에서 숫자만 바로 적기. name이 없으면 항목도 고른다 */
+async function directEdit(space, name){
+  if(!cur) return;
+  const key0 = name ? space + "|" + name : null, old = key0 ? directOf()[key0] : null;
+  const isNa = !!(key0 && (cur.checks || {})[key0] === "na");
+  const inList = !!(name && itemsOf(space).some(i => i.t === "dim" && i.n === name));
+  const rem = checkStatus(space).filter(x => x.t === "dim" && x.state === "todo").map(x => x.n);
+  const extra = [];
+  if(assets) extra.push({a:"photo", label:`${ICON.cam} 사진 찍어서 재기`});
+  if(inList && !old) extra.push({a:"na", label: isNa ? "해당 없음 풀기" : "잴 필요 없음 (해당 없음)"});
+  const a = {label: name || "", v: old ? old.v : "", vs: old ? old.vs : null, ref: old ? old.ref : ""};
+  const r = await dimDialog(a, !!old, {space, rem, fixed: !!name, needLabel: true,
+    title: name ? `${space} · ${name}` : `${space} 치수 바로 적기`,
+    sub: "사진 없이 숫자만 적어요. 실측표·엑셀·카톡 글에 같이 들어가요.",
+    extra, onPhoto: () => { nextSpace = space; $("#fileCam").click(); }});
+  if(r === null || r === "photo") return;
+  const direct = {...directOf()}, checks = {...(cur.checks || {})};
+  let msg = "";
+  if(r === "danger"){ delete direct[key0]; msg = "지웠어요"; }
+  else if(r === "na"){ if(isNa) delete checks[key0]; else checks[key0] = "na"; }
+  else {
+    const label = r.label.replace(/\|/g, "/"), key = space + "|" + label;
+    direct[key] = {v: r.v, vs: r.vs, ref: r.ref, at: Date.now()};
+    delete checks[key];
+    msg = `${label} ${r.v} 저장했어요`;
+  }
+  cur = {...cur, direct, checks}; renderSite();
+  try{ await db.doc("sites/" + cur.id).update({direct, checks, updatedAt: Date.now()}); if(msg) toast(msg); }catch(e){ toast(writeErr(e)); }
+}
 function tableHtml(groups){
-  if(!groups.length) return `<p class="empty">사진이 없어서 실측표가 비어 있어요.</p>`;
-  return groups.map(g => {
-    const rows = g.items.flatMap(p => dimsOf(p).map(a => ({p, a})));
-    const memos = g.items.filter(p => p.memo);
-    return `<section class="group"><h3>${esc(g.n)}</h3>
+  const sp = spacesOf(cur), idx = n => { const i = sp.indexOf(n); return i < 0 ? 999 : i; };
+  const names = [...new Set([...groups.map(g => g.n), ...directRows().map(r => r.space)])].sort((a, b) => idx(a) - idx(b));
+  if(!names.length) return `<p class="empty">아직 적은 치수가 없어요.<br>사진 위에 치수선을 긋거나, 체크리스트에서 항목을 눌러 바로 적어 주세요.</p>`;
+  return `<div class="tbl-cols">` + names.map(n => {
+    const items = (groups.find(g => g.n === n) || {items: []}).items;
+    const rows = [...directIn(n).map(r => ({p: null, a: r.a, key: r.key})), ...items.flatMap(p => dimsOf(p).map(a => ({p, a})))];
+    const memos = items.filter(p => p.memo);
+    return `<section class="group"><h3>${esc(n)}</h3>
       ${rows.length ? `<div style="overflow-x:auto"><table class="m"><thead><tr><th>항목</th><th>치수(mm)</th><th>기준</th><th>사진</th></tr></thead><tbody>
-        ${rows.map(({p,a}) => `<tr><td>${esc(a.label||"치수")}</td><td class="v">${esc(a.v)}${a.vs && a.vs.length > 1 ? `<div class="sub" style="font-weight:400;font-size:12px;${spreadOf(a) >= SPREAD_WARN ? "color:var(--danger)" : ""}">${a.vs.join(" / ")} · 차${spreadOf(a)}</div>` : ""}</td><td>${esc(a.ref||"")}</td>
-          <td><button type="button" class="btn small ghost" data-photo="${esc(p.id)}" style="padding:0 6px">사진 ${numberOf(p.id)}</button></td></tr>`).join("")}
+        ${rows.map(({p, a, key}) => `<tr><td>${esc(a.label||"치수")}</td><td class="v">${esc(a.v)}${a.vs && a.vs.length > 1 ? `<div class="sub" style="font-weight:400;font-size:12px;${spreadOf(a) >= SPREAD_WARN ? "color:var(--danger)" : ""}">${a.vs.join(" / ")} · 차${spreadOf(a)}</div>` : ""}</td><td>${esc(a.ref||"")}</td>
+          <td>${p ? `<button type="button" class="btn small ghost" data-photo="${esc(p.id)}" style="padding:0 6px">사진 ${numberOf(p.id)}</button>`
+                  : `<button type="button" class="btn small ghost" data-direct="${esc(key)}" style="padding:0 6px">직접 · 고치기</button>`}</td></tr>`).join("")}
       </tbody></table></div>` : `<p class="sub" style="margin:0">적힌 치수가 없어요.</p>`}
       ${memos.map(p => `<p class="memo">사진 ${numberOf(p.id)} 메모: ${esc(p.memo)}</p>`).join("")}
     </section>`;
-  }).join("");
+  }).join("") + `</div>`;
 }
 
 /* ---------- sites ---------- */
@@ -932,23 +1093,32 @@ async function addSpace(){
 async function removeSpace(name){
   if(!cur || !(cur.customSpaces || []).includes(name)) return;
   const inSpace = photos.filter(p => p.space === name);
+  const inDirect = directIn(name);
+  const moves = [inSpace.length ? `사진 ${inSpace.length}장` : "", inDirect.length ? `바로 적은 치수 ${inDirect.length}개` : ""].filter(Boolean).join("과 ");
   const r = await dialog({title:`'${name}' 공간 지우기`,
-    text: esc(inSpace.length ? `이 공간 사진 ${inSpace.length}장은 지우지 않고 '기타'로 옮겨요.` : "공간 이름만 목록에서 빠져요."),
+    text: esc(moves ? `이 공간의 ${moves}${inDirect.length ? "는" : "은"} 지우지 않고 '기타'로 옮겨요.` : "공간 이름만 목록에서 빠져요."),
     ok:"지우기"});
   if(r === null) return;
   try{
     for(const p of inSpace) await db.doc("photos/" + p.id).update({space:"기타", updatedAt: Date.now()});
     const list = (cur.customSpaces || []).filter(x => x !== name);
     const checks = {...(cur.checks || {})}; Object.keys(checks).forEach(k => { if(k.startsWith(name + "|")) delete checks[k]; });
-    await db.doc("sites/" + cur.id).update({customSpaces: list, checks, updatedAt: Date.now()});
-    cur = {...cur, customSpaces: list, checks};
+    // 바로 적은 치수도 '기타'로 옮긴다. 기타에 같은 이름이 있으면 "(원래 공간)"을 붙여 겹치지 않게
+    const direct = {...directOf()};
+    inDirect.forEach(row => {
+      const d = direct[row.key]; delete direct[row.key];
+      let k = "기타|" + row.n; if(direct[k]) k = "기타|" + row.n + " (" + name + ")";
+      direct[k] = d;
+    });
+    await db.doc("sites/" + cur.id).update({customSpaces: list, checks, direct, updatedAt: Date.now()});
+    cur = {...cur, customSpaces: list, checks, direct};
     if(nextSpace === name) nextSpace = "거실";
     toast(`'${name}' 공간을 지웠어요`); renderSite();
   }catch(e){ toast(writeErr(e)); }
 }
 function openSite(id){
   cur = sites.find(s => s.id === id); if(!cur) return;
-  view = "site"; tab = "photos"; photos = []; nextSpace = "거실";
+  view = "site"; tab = "photos"; photos = []; nextSpace = "거실"; pick = null;
   if(unsubPhotos) unsubPhotos();
   unsubPhotos = db.collection("photos").where("siteId","==",id).onSnapshot(snap => {
     photos = snap.docs.map(d => ({id:d.id, ...d.data()}));
@@ -968,7 +1138,7 @@ async function leaveSite(){
   }
   closeSite();
 }
-function closeSite(){ if(unsubPhotos){ unsubPhotos(); unsubPhotos = null; } cur = null; photos = []; view = "home"; renderHome(); window.scrollTo(0,0); }
+function closeSite(){ pick = null; if(unsubPhotos){ unsubPhotos(); unsubPhotos = null; } cur = null; photos = []; view = "home"; renderHome(); window.scrollTo(0,0); }
 const touchSite = () => cur ? db.doc("sites/"+cur.id).update({updatedAt: Date.now()}).catch(()=>{}) : Promise.resolve();
 function writeErr(e){
   const c = e && e.code;
@@ -994,9 +1164,19 @@ function shrink(file){
     img.src = url;
   });
 }
+/* 오프라인 앱: 카메라로 찍은 원본을 휴대폰 '다운로드' 폴더에도 바로 저장 (갤러리 'Download' 앨범에 보임). 끄고 켤 수 있다 */
+let autoGallery = false;
+if(OFFLINE){ autoGallery = true; try{ autoGallery = localStorage.getItem("silcheuk-auto-gallery") !== "off"; }catch(_){} }
+function setAutoGallery(on){ autoGallery = on; try{ localStorage.setItem("silcheuk-auto-gallery", on ? "on" : "off"); }catch(_){} }
+async function saveToPhone(file, siteName, space, no){
+  const ext = /png/i.test(file.type) ? "png" : /heic|heif/i.test(file.type) ? "heic" : "jpg";
+  const name = `실측_${safeName(siteName) || "현장"}_${safeName(space) || "사진"}_${String(no).padStart(2, "0")}.${ext}`;
+  try{ await localDownloads.save({filename: name, data: file}); return true; }catch(_){ return false; }
+}
 async function handleFiles(fileList, openAfter){
   const files = [...fileList]; if(!files.length || !cur) return;
-  let last = null, okCount = 0, no = nextNo();
+  let last = null, okCount = 0, no = nextNo(), phoneSaved = 0;
+  const toPhone = OFFLINE && autoGallery && openAfter;   // 앨범에서 고른 사진은 이미 갤러리에 있으니 다시 저장하지 않는다
   for(let i = 0; i < files.length; i++){
     toast(`사진 올리는 중 ${i+1}/${files.length}`, 0);
     try{
@@ -1005,11 +1185,17 @@ async function handleFiles(fileList, openAfter){
       localUrls.set(r.id, URL.createObjectURL(blob));
       const ref = db.collection("photos").doc(); const now = Date.now();
       const data = {siteId: cur.id, no, assetId: r.id, annotatedId: null, space: nextSpace, memo: "", ann: [], w, h, createdAt: now + i, updatedAt: now + i};
-      await ref.set(data); last = {id: ref.id, ...data}; okCount++; no++;
+      await ref.set(data); last = {id: ref.id, ...data}; okCount++;
+      if(toPhone && await saveToPhone(files[i], cur.name, nextSpace, no)) phoneSaved++;
+      no++;
     }catch(e){ toast(e && e.code ? writeErr(e) : (e.message || "사진을 올리지 못했어요")); await new Promise(r => setTimeout(r, 1600)); }
   }
   await touchSite();
-  toast(okCount ? `${okCount}장 저장했어요` : "저장된 사진이 없어요");
+  let first = false;
+  if(phoneSaved){ try{ first = !localStorage.getItem("silcheuk-auto-gallery-seen"); localStorage.setItem("silcheuk-auto-gallery-seen", "1"); }catch(_){} }
+  toast(!okCount ? "저장된 사진이 없어요"
+    : phoneSaved ? (first ? `저장했어요. 휴대폰 갤러리 'Download' 앨범에도 원본이 저장돼요. 크롬이 '여러 파일 다운로드'를 물으면 허용을 눌러 주세요.` : `${okCount}장 저장했어요 · 휴대폰 갤러리에도 저장`)
+    : `${okCount}장 저장했어요`, first ? 6000 : 2600);
   if(openAfter && last && files.length === 1) openEditor(last);
 }
 /* 평면 스케치: 모눈종이 한 장을 사진처럼 저장하고, 같은 편집기(직선·치수선·글자)로 그린다 */
@@ -1104,7 +1290,7 @@ function renderAnn(ctx, list, W, H, boxes){
 
 /* ---------- editor ---------- */
 const cv = $("#cv"), loupe = $("#loupe");
-const ed = {photo:null, img:null, ann:[], hist:[], tool:"dim", color:COLORS[0], drag:null, boxes:[], w:0, h:0, dirty:false, view:{s:1, tx:0, ty:0}};
+const ed = {photo:null, img:null, ann:[], hist:[], fut:[], tool:"dim", color:COLORS[0], drag:null, boxes:[], w:0, h:0, dirty:false, view:{s:1, tx:0, ty:0}};
 
 function buildTools(){
   const tools = [["dim","치수선"],["line","직선"],["text","글자"],["pen","펜"],["erase","지우기"]];
@@ -1115,21 +1301,24 @@ function buildTools(){
       `<button type="button" class="tool" id="colorBtn" aria-label="색 고르기"><span class="cdot" style="background:${ed.color}"></span>색</button>`;
   $("#edTools").innerHTML = `<div class="tools-scroll">${left}</div>
     <div class="tools-fixed">
-      <button type="button" class="tool" id="undo">${ICON.undo}되돌리기</button>
+      <button type="button" class="tool" id="undo" aria-label="되돌리기">${ICON.undo}되돌리기</button>
+      <button type="button" class="tool" id="redo" aria-label="다시하기">${ICON.redo}다시하기</button>
       <button type="button" class="tool icon" id="fitBtn" aria-label="화면 맞춤">${ICON.fit}맞춤</button>
     </div>`;
   $("#fitBtn").onclick = () => { ed.view = {s:1, tx:0, ty:0}; applyView(); };
   const cb = $("#colorBtn"); if(cb) cb.onclick = () => { ed.colorOpen = true; buildTools(); };
-  $("#edTools").querySelectorAll("[data-tool]").forEach(b => b.onclick = () => { ed.tool = b.dataset.tool; buildTools(); });
+  $("#edTools").querySelectorAll("[data-tool]").forEach(b => b.onclick = () => { ed.tool = b.dataset.tool; buildTools(); draw(); });
   $("#edTools").querySelectorAll("[data-color]").forEach(b => b.onclick = () => { ed.color = b.dataset.color; ed.colorOpen = false; buildTools(); });
-  $("#undo").onclick = () => { if(!ed.hist.length){ toast("되돌릴 게 없어요"); return; } ed.ann = ed.hist.pop(); ed.dirty = true; draw(); autoSave(); };
+  $("#undo").onclick = () => { if(!ed.hist.length){ toast("되돌릴 게 없어요"); return; } ed.fut.push(clone(ed.ann)); ed.ann = ed.hist.pop(); ed.dirty = true; draw(); autoSave(); undoState(); };
+  $("#redo").onclick = () => { if(!ed.fut.length){ toast("다시 할 게 없어요"); return; } ed.hist.push(clone(ed.ann)); ed.ann = ed.fut.pop(); ed.dirty = true; draw(); autoSave(); undoState(); };
+  undoState();
   updateHint();
 }
 /* 이 공간에서 아직 안 잰 치수 항목 (지금 편집 중인 선까지 포함해서 계산) */
 function remainingFor(space){
   const labels = new Set([...photos.filter(p => p.space === space && (!ed.photo || p.id !== ed.photo.id)).flatMap(p => dimsOf(p)), ...ed.ann.filter(a => a.t === "dim")].map(a => (a.label || "").trim()));
-  const ch = (cur && cur.checks) || {};
-  return itemsOf(space).filter(it => it.t === "dim" && !labels.has(it.n) && !ch[space + "|" + it.n]).map(it => it.n);
+  const ch = (cur && cur.checks) || {}, dir = directOf();
+  return itemsOf(space).filter(it => it.t === "dim" && !labels.has(it.n) && !ch[space + "|" + it.n] && !dir[space + "|" + it.n]).map(it => it.n);
 }
 function updateHint(){
   if(!ed.photo) return;
@@ -1138,10 +1327,14 @@ function updateHint(){
     const r = remainingFor($("#edSpace").value);
     t = r.length ? `${$("#edSpace").value} 남은 항목 ${r.length}개: ${r.slice(0, 4).join(", ")}${r.length > 4 ? " …" : ""}` : `${$("#edSpace").value} 치수 항목을 다 쟀어요.`;
   }
+  if(penSeen) t += " · 펜으로 그리고, 손가락으로는 확대·이동해요.";
   $("#edHint").textContent = t;
 }
 /* 바꿀 때마다 저장 (선은 pushHist 바로 뒤에 바뀌므로 잠깐 기다렸다 저장). 선이 그려진 합성 사진은 '완료' 때 만든다 */
-function pushHist(){ ed.hist.push(JSON.parse(JSON.stringify(ed.ann))); if(ed.hist.length > 50) ed.hist.shift(); ed.dirty = true; autoSave(); }
+const clone = x => JSON.parse(JSON.stringify(x));
+function undoState(){ const u = $("#undo"), r = $("#redo"); if(u) u.disabled = !ed.hist.length; if(r) r.disabled = !ed.fut.length; }
+/* 새로 그리거나 고치면 '다시하기' 목록은 비운다 */
+function pushHist(prev){ ed.hist.push(prev || clone(ed.ann)); if(ed.hist.length > 50) ed.hist.shift(); ed.fut = []; ed.dirty = true; autoSave(); setTimeout(undoState, 0); }
 let autoT = null, autoBusy = false, autoAgain = false;
 const edState = t => { $("#edState").textContent = t; };
 function autoSave(){ clearTimeout(autoT); autoT = setTimeout(() => { updateHint(); flushAuto(); }, 700); edState("저장 중…"); }
@@ -1170,7 +1363,7 @@ document.addEventListener("visibilitychange", () => { if(document.visibilityStat
 window.addEventListener("pagehide", () => { if(autoT) flushAuto(); });
 
 function openEditor(p){
-  ed.photo = p; ed.ann = JSON.parse(JSON.stringify(p.ann || [])); ed.hist = []; ed.dirty = false; ed.img = null;
+  ed.photo = p; ed.ann = JSON.parse(JSON.stringify(p.ann || [])); ed.hist = []; ed.fut = []; ed.dirty = false; ed.img = null;
   const sketch = p.kind === "sketch";
   ed.tool = sketch ? "line" : "dim"; ed.color = sketch ? INK : COLORS[0];
   ed.view = {s:1, tx:0, ty:0}; applyView();
@@ -1213,6 +1406,19 @@ function draw(){
   ctx.drawImage(ed.img, 0, 0, ed.w, ed.h);
   ed.boxes = []; renderAnn(ctx, ed.ann, ed.w, ed.h, ed.boxes);
   if(ed.drag && ed.drag.preview) renderAnn(ctx, [ed.drag.preview], ed.w, ed.h);
+  // 치수선·직선 도구일 때 선 끝에 작은 동그라미: 여기를 끌면 끝점만 옮겨진다 (화면에만 보이고 저장 사진에는 안 들어감)
+  if(ed.tool === "dim" || ed.tool === "line"){
+    const r = 7 / cssPerImg(), on = ed.drag && ed.drag.grab;
+    ed.ann.forEach((a, i) => {
+      if(a.t !== "dim" && a.t !== "line") return;
+      [[a.x1, a.y1, 1], [a.x2, a.y2, 2]].forEach(([x, y, e]) => {
+        const hot = on && on.i === i && on.e === e;
+        ctx.beginPath(); ctx.arc(x*ed.w, y*ed.h, hot ? r*1.5 : r, 0, Math.PI*2);
+        ctx.fillStyle = hot ? a.c : "rgba(255,255,255,.85)"; ctx.fill();
+        ctx.lineWidth = 2 / cssPerImg(); ctx.strokeStyle = "rgba(0,0,0,.6)"; ctx.stroke();
+      });
+    });
+  }
 }
 window.addEventListener("resize", () => { if(!$("#editor").hidden){ fit(); draw(); } });
 
@@ -1230,6 +1436,15 @@ function hitAny(p){
     if(a.t === "pen" && a.pts.some(([x,y], j) => j && segDist(p, a.pts[j-1][0]*W, a.pts[j-1][1]*H, x*W, y*H) < tol)) return i;
   }
   return -1;
+}
+/* 누른 곳 가까이에 치수선·직선 끝점이 있으면 {i, e(1|2)} */
+function hitEnd(p){
+  const tol = 24 / cssPerImg(); let best = null, bd = tol;
+  ed.ann.forEach((a, i) => {
+    if(a.t !== "dim" && a.t !== "line") return;
+    for(const [x, y, e] of [[a.x1, a.y1, 1], [a.x2, a.y2, 2]]){ const d = Math.hypot(p.x - x*ed.w, p.y - y*ed.h); if(d < bd){ bd = d; best = {i, e}; } }
+  });
+  return best;
 }
 function snap(s, p){
   const dx = p.x - s.x, dy = p.y - s.y, tan = Math.tan(6*Math.PI/180);
@@ -1251,8 +1466,9 @@ function showLoupe(p){
 const hideLoupe = () => loupe.style.display = "none";
 const round4 = n => Math.round(n*10000)/10000;
 
-/* 손가락 하나 = 그리기, 두 개 = 확대·이동 (그리던 선은 취소) */
-const ptrs = new Map(); let pinch = null;
+/* 손가락 하나 = 그리기, 두 개 = 확대·이동 (그리던 선은 취소)
+   태블릿 펜(애플펜슬·S펜)을 한 번이라도 쓰면: 그리기는 펜으로만, 손가락은 확대·이동만 (손바닥이 닿아도 선이 안 그어짐) */
+const ptrs = new Map(); let pinch = null, penSeen = false, pan = null;
 const stagePt = e => { const r = $("#edStage").getBoundingClientRect(); return {x: e.clientX - r.left, y: e.clientY - r.top}; };
 function startPinch(){
   const [a, b] = [...ptrs.values()];
@@ -1268,18 +1484,47 @@ function movePinch(){
 cv.addEventListener("pointerdown", e => {
   if(!ed.img) return;
   e.preventDefault(); try{ cv.setPointerCapture(e.pointerId); }catch(_){}
-  ptrs.set(e.pointerId, stagePt(e));
-  if(ptrs.size === 2){ if(ed.drag){ ed.drag = null; hideLoupe(); draw(); } startPinch(); return; }
+  const isPen = e.pointerType === "pen";
+  if(isPen && !penSeen){ penSeen = true; updateHint(); }
+  if(!isPen) ptrs.set(e.pointerId, stagePt(e));
+  if(!isPen && ptrs.size === 2){
+    if(ed.drag && ed.drag.pen) return;   // 펜으로 그리는 중에 닿은 손바닥은 무시
+    pan = null;
+    if(ed.drag){ ed.drag = null; hideLoupe(); draw(); }
+    startPinch(); return;
+  }
   if(ptrs.size > 2 || pinch || ed.drag) return;
-  const p = toImg(e); ed.drag = {id: e.pointerId, start: p, end: p, moved: false, pts: [p], preview: null};
+  if(penSeen && !isPen){ pan = {id: e.pointerId, p0: stagePt(e), v0: {...ed.view}}; return; }
+  const p = toImg(e); ed.drag = {id: e.pointerId, pen: isPen, start: p, end: p, moved: false, pts: [p], preview: null};
+  if(ed.tool === "dim" || ed.tool === "line"){
+    const g = hitEnd(p);
+    if(g){ ed.drag.grab = {...g, orig: clone(ed.ann[g.i])}; ed.drag.start = p; draw(); showLoupe(p); return; }
+  }
   if(ed.tool === "dim" || ed.tool === "line" || ed.tool === "pen") showLoupe(p);
 });
 cv.addEventListener("pointermove", e => {
   if(ptrs.has(e.pointerId)) ptrs.set(e.pointerId, stagePt(e));
   if(pinch){ if(ptrs.size >= 2) movePinch(); return; }
+  if(pan && pan.id === e.pointerId){
+    const q = stagePt(e);
+    if(ed.view.s > 1){ ed.view = clampView({s: ed.view.s, tx: pan.v0.tx + q.x - pan.p0.x, ty: pan.v0.ty + q.y - pan.p0.y}); applyView(); }
+    return;
+  }
   const d = ed.drag; if(!d || d.id !== e.pointerId) return;
   let p = toImg(e);
   if(!d.moved && Math.hypot(p.x-d.start.x, p.y-d.start.y)*cssPerImg() > 8) d.moved = true;
+  if(d.grab){
+    if(!d.moved) return;
+    const g = d.grab, a = ed.ann[g.i], o = g.orig;
+    // 다른 쪽 끝을 기준으로 수평·수직 맞춤
+    const other = g.e === 1 ? {x:o.x2*ed.w, y:o.y2*ed.h} : {x:o.x1*ed.w, y:o.y1*ed.h};
+    const base = g.e === 1 ? {x:o.x1*ed.w, y:o.y1*ed.h} : {x:o.x2*ed.w, y:o.y2*ed.h};
+    let q = {x: base.x + p.x - d.start.x, y: base.y + p.y - d.start.y};
+    q = {x: Math.max(0, Math.min(ed.w, q.x)), y: Math.max(0, Math.min(ed.h, q.y))};
+    q = snap(other, q);
+    if(g.e === 1){ a.x1 = round4(q.x/ed.w); a.y1 = round4(q.y/ed.h); } else { a.x2 = round4(q.x/ed.w); a.y2 = round4(q.y/ed.h); }
+    draw(); showLoupe(q); return;
+  }
   if((ed.tool === "dim" || ed.tool === "line") && d.moved){
     p = snap(d.start, p); d.end = p;
     d.preview = {t:ed.tool, x1:d.start.x/ed.w, y1:d.start.y/ed.h, x2:p.x/ed.w, y2:p.y/ed.h, c:ed.color};
@@ -1293,9 +1538,26 @@ cv.addEventListener("pointermove", e => {
 });
 async function endDrag(e){
   ptrs.delete(e.pointerId);
+  if(pan && pan.id === e.pointerId){ pan = null; return; }
   if(pinch){ if(ptrs.size < 2) pinch = null; return; }
   const d = ed.drag; if(!d || d.id !== e.pointerId) return;
   ed.drag = null; hideLoupe();
+  if(d.grab){
+    const g = d.grab, a = ed.ann[g.i];
+    const moved = a && (a.x1 !== g.orig.x1 || a.y1 !== g.orig.y1 || a.x2 !== g.orig.x2 || a.y2 !== g.orig.y2);
+    const short = a && Math.hypot((a.x2-a.x1)*ed.w, (a.y2-a.y1)*ed.h)*cssPerImg() < 20;
+    if(e.type === "pointercancel" || !moved || short){
+      if(a) ed.ann[g.i] = g.orig;
+      if(short && moved) toast("선이 너무 짧아져서 원래대로 두었어요");
+      draw();
+      // 끝점을 움직이지 않고 톡 누르기만 했으면 예전처럼 치수 고치기
+      if(!moved && e.type !== "pointercancel" && ed.tool === "dim" && a.t === "dim") editAnn(g.i);
+      return;
+    }
+    const prev = clone(ed.ann); prev[g.i] = g.orig; pushHist(prev); draw();
+    if(a.t === "dim") toast("치수선 위치만 옮겼어요. 숫자를 바꾸려면 숫자를 눌러 주세요", 2200);
+    return;
+  }
   if(e.type === "pointercancel"){ draw(); return; }
   const p = toImg(e);
   const longEnough = d.moved && Math.hypot(d.end.x-d.start.x, d.end.y-d.start.y)*cssPerImg() > 20;
@@ -1328,9 +1590,10 @@ async function endDrag(e){
 cv.addEventListener("pointerup", endDrag);
 cv.addEventListener("pointercancel", endDrag);
 
-function dimDialog(a, editing){
+/* opt (체크리스트에서 바로 적을 때): space, rem(안 잰 항목), fixed(항목이 정해짐), needLabel, title, sub, extra:[{a,label}], onPhoto */
+function dimDialog(a, editing, opt = {}){
   // 항목 칩: 이 공간에서 아직 안 잰 것부터. 고치는 중인 선의 항목도 남겨 둔다
-  const space = $("#edSpace").value, rem = remainingFor(space), all = itemsOf(space).filter(i => i.t === "dim").map(i => i.n);
+  const space = opt.space || $("#edSpace").value, rem = opt.rem || remainingFor(space), all = itemsOf(space).filter(i => i.t === "dim").map(i => i.n);
   const chips = [...new Set([...(a.label ? [a.label] : []), ...rem, ...all])];
   // 순서: 항목 칩 → 기준 → 숫자 → 확인. 칩을 누르면 숫자 칸으로 넘어가 키패드가 열린다.
   // 여러 점 측정(같은 자리를 높이 바꿔 다시 잰 값)은 눌렀을 때만 펼치고, 가구는 가장 좁은 값에 맞추므로 최솟값을 기록
@@ -1338,11 +1601,11 @@ function dimDialog(a, editing){
   return new Promise(resolve => {
     const back = document.createElement("div"); back.className = "dlg-back";
     back.innerHTML = `<form class="dlg dim-dlg" role="dialog" aria-modal="true" aria-label="치수 입력">
-      <h2>${editing ? "치수 고치기" : "치수 적기"}</h2>
-      <div class="field"><span class="flabel">무엇을 쟀나요? <span class="sub">안 잰 항목이 앞, 잰 항목은 ✓</span></span>
+      <h2>${esc(opt.title || (editing ? "치수 고치기" : "치수 적기"))}</h2>${opt.sub ? `<p class="sub" style="margin:-8px 0 0">${esc(opt.sub)}</p>` : ""}
+      ${opt.fixed ? `<input id="dLabel" type="hidden" value="${esc(a.label || "")}">` : `<div class="field"><span class="flabel">무엇을 쟀나요? <span class="sub">안 잰 항목이 앞, 잰 항목은 ✓</span></span>
         <div class="chips" data-g="label">${chips.map(c => `<button type="button" class="chip" data-v="${esc(c)}" aria-pressed="${c === a.label}">${esc(c)}${rem.includes(c) ? "" : ` <span class="n">✓</span>`}</button>`).join("")}</div>
         <input id="dLabel" class="small-in" value="${esc(a.label || "")}" placeholder="목록에 없으면 직접 입력" autocomplete="off" aria-label="항목 이름">
-      </div>
+      </div>`}
       <div class="field"><span class="flabel">기준 <span class="sub">선택 · 다시 누르면 해제</span></span>
         <div class="chips" data-g="ref">${REF_CHIPS.map(c => `<button type="button" class="chip small" data-v="${esc(c)}" aria-pressed="${c === a.ref}">${esc(c)}</button>`).join("")}</div>
       </div>
@@ -1358,6 +1621,7 @@ function dimDialog(a, editing){
       <div class="actions">
         <button type="button" class="btn" data-a="cancel">취소</button>
         <button type="submit" class="btn primary">${editing ? "저장" : "확인"}</button>
+        ${(opt.extra || []).map(x => `<button type="button" class="btn wide" data-a="${esc(x.a)}">${x.label}</button>`).join("")}
         ${editing ? `<button type="button" class="btn danger wide" data-a="danger">이 치수 지우기</button>` : ""}
       </div></form>`;
     document.body.appendChild(back);
@@ -1373,11 +1637,18 @@ function dimDialog(a, editing){
     q("#dLabel").addEventListener("input", markLabel);
     q("#dMultiBtn").onclick = () => { q("#dMulti").style.display = ""; q("#dMultiBtn").style.display = "none"; q("#dV2").focus(); };
     back.addEventListener("click", e => {
-      const b = e.target.closest("[data-a]"); if(b) return done(b.dataset.a === "danger" ? "danger" : null);
+      const b = e.target.closest("[data-a]");
+      if(b){
+        const act = b.dataset.a;
+        // 사진 찍기는 누른 그 순간에 카메라를 열어야 휴대폰이 막지 않는다
+        if(act === "photo" && opt.onPhoto) opt.onPhoto();
+        return done(act === "cancel" ? null : act);
+      }
       if(e.target === back) done(null);
     });
     form.addEventListener("submit", e => {
       e.preventDefault();
+      if(opt.needLabel && !q("#dLabel").value.trim()){ const p = q("#dErr"); p.textContent = "무엇을 쟀는지 골라 주세요"; p.hidden = false; return; }
       const clean = s => String(s || "").replace(/[,\s]/g, "").replace(/mm$/i, "");
       const raw = [clean(q("#dV").value), clean(q("#dV2").value), clean(q("#dV3").value)];
       const err = m => { const p = q("#dErr"); p.textContent = m; p.hidden = false; q("#dV").focus(); };
@@ -1490,9 +1761,11 @@ function textSummary(site = cur, list = photos){
   const all = byTime(list), sp = spacesOf(site), num = p => p.no || all.indexOf(p) + 1;
   const names = [...sp, ...[...new Set(all.map(p => p.space))].filter(x => !sp.includes(x))];
   let out = `[실측] ${site.name}\n주소: ${site.address||"-"}\n실측일: ${site.date||"-"}${site.phone?"\n연락처: "+site.phone:""}${site.memo?"\n메모: "+site.memo:""}\n(치수 단위 mm)\n`;
-  names.forEach(n => {
-    const items = all.filter(p => p.space === n); if(!items.length) return;
-    out += `\n■ ${n} (사진 ${items.length}장)\n`;
+  const dimVal = a => `${a.v}${a.vs && a.vs.length > 1 ? ` [${a.vs.join("/")}, 차 ${spreadOf(a)}${spreadOf(a) >= SPREAD_WARN ? " 주의" : ""}]` : ""}${a.ref ? ` (${a.ref})` : ""}`;
+  [...names, ...[...new Set(directRows(site).map(r => r.space))].filter(x => !names.includes(x))].forEach(n => {
+    const items = all.filter(p => p.space === n), dr = directIn(n, site); if(!items.length && !dr.length) return;
+    out += `\n■ ${n}${items.length ? ` (사진 ${items.length}장)` : ""}\n`;
+    dr.forEach(r => out += `- ${r.n}: ${dimVal(r.a)} (직접 입력)\n`);
     items.forEach(p => {
       dimsOf(p).forEach(a => out += `- ${a.label||"치수"}: ${a.v}${a.vs && a.vs.length > 1 ? ` [${a.vs.join("/")}, 차 ${spreadOf(a)}${spreadOf(a) >= SPREAD_WARN ? " 주의" : ""}]` : ""}${a.ref ? ` (${a.ref})` : ""} (사진 ${num(p)})\n`);
       if(p.memo) out += `- 메모(사진 ${num(p)}): ${p.memo}\n`;
@@ -1519,7 +1792,15 @@ function sheetRows(site = cur, list = photos){
     });
     if(p.memo) rows.push([n, "메모", "", "", "", "", num(p), p.memo]);
   }));
-  return rows;
+  // 사진 없이 바로 적은 치수: 같은 공간의 맨 앞에 넣고, 사진번호 칸에는 '직접'
+  const dr = directRows(site);
+  if(!dr.length) return rows;
+  const order = [...names, ...[...new Set(dr.map(r => r.space))].filter(x => !names.includes(x))];
+  const drows = dr.map(r => {
+    const raw = String(r.a.v ?? "").replace(/,/g, "").trim(), v = Number(raw), multi = r.a.vs && r.a.vs.length > 1;
+    return [r.space, r.n, raw !== "" && isFinite(v) ? v : r.a.v, r.a.ref || "", multi ? r.a.vs.join(" / ") : "", multi ? spreadOf(r.a) : "", "직접", ""];
+  });
+  return [...drows, ...rows].map((r, i) => [r, i]).sort((x, y) => order.indexOf(x[0][0]) - order.indexOf(y[0][0]) || x[1] - y[1]).map(x => x[0]);
 }
 function buildWorkbook(site, list){
   const head = [["실측표"], ["현장", site.name || ""], ["주소", site.address || ""], ["실측일", site.date || ""], ["연락처", site.phone || ""], ["현장 메모", site.memo || ""], ["단위", "mm"], [], SHEET_HEAD];
@@ -1575,11 +1856,11 @@ async function showGallery(onlyNew){
   const all = onlyNew && unsaved.length ? [...unsaved].sort((a,b) => (a.createdAt||0) - (b.createdAt||0)) : ordered();
   if(!all.length){ toast("저장할 사진이 없어요"); return; }
   const ov = document.createElement("div");
-  ov.style.cssText = "position:fixed;inset:0;z-index:30;background:var(--paper);overflow:auto;padding:max(12px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(24px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))";
+  ov.className = "ov"; ov.style.zIndex = "30";
   ov.innerHTML = `<div class="top" style="padding-top:0"><h1 style="font-size:20px">사진 갤러리에 저장</h1><button class="btn small" type="button" data-close>닫기</button></div>
     <div class="stack" style="margin-top:12px">
       <p class="notice" style="margin:0">사진을 <b>길게 눌러</b> "이미지 저장"이나 "사진에 추가"를 고르면 휴대폰 사진첩에 저장돼요. 치수가 그려진 사진으로 저장돼요.</p>
-      <div class="stack" id="galList"><p class="sub">사진 준비하는 중…</p></div>
+      <div class="stack gal-list" id="galList"><p class="sub">사진 준비하는 중…</p></div>
     </div>`;
   document.body.appendChild(ov); document.body.classList.add("noscroll");
   const closeOv = () => {
@@ -1589,16 +1870,21 @@ async function showGallery(onlyNew){
   };
   ov.querySelector("[data-close]").onclick = closeOv;
   const list = ov.querySelector("#galList"); list.innerHTML = "";
-  for(const p of all){
+  const prog = document.createElement("p"); prog.className = "sub"; prog.style.cssText = "margin:0;grid-column:1/-1";
+  list.appendChild(prog);
+  for(let k = 0; k < all.length; k++){
+    const p = all[k];
     if(!ov.isConnected) return;
+    prog.textContent = `사진 준비하는 중 ${k + 1}/${all.length}`;
     const src = await photoBlob(p).then(blobToDataUrl).catch(() => imgSrc(p.assetId));
     const fig = document.createElement("figure"); fig.style.margin = "0";
     fig.innerHTML = `<img alt="사진 ${numberOf(p.id)}" style="width:100%;border-radius:10px;display:block" src="${esc(src)}"><figcaption class="sub" style="margin-top:4px">사진 ${numberOf(p.id)} · ${esc(p.space)}${p.memo ? " · " + esc(p.memo) : ""}</figcaption>`;
-    list.appendChild(fig);
+    list.insertBefore(fig, prog);
   }
+  prog.remove();
   if(mode !== "local" || !ov.isConnected) return;
   const done = document.createElement("button");
-  done.type = "button"; done.className = "btn primary"; done.style.minHeight = "56px";
+  done.type = "button"; done.className = "btn primary"; done.style.minHeight = "56px"; done.style.gridColumn = "1/-1";
   done.textContent = "사진첩에 다 저장했어요";
   done.onclick = async () => {
     try{ await db.doc("sites/" + cur.id).update({galleryAt: Date.now()}); cur = {...cur, galleryAt: Date.now()}; toast("확인했어요. 새로 찍거나 고친 사진이 생기면 다시 알려 드려요.", 3500); }
@@ -1641,6 +1927,7 @@ async function addSiteToZip(zip, site, list, folder, progress){
     dimsOf(p).forEach(a => csvRows.push([p.space, a.label||"치수", a.v, a.ref || "", p.no || i+1, ""]));
     if(p.memo) csvRows.push([p.space, "메모", "", "", p.no || i+1, p.memo]);
   }
+  directRows(site).forEach(r => csvRows.push([r.space, r.n, r.a.v, r.a.ref || "", "직접", ""]));
   zip.file(base + "실측표.csv", "﻿" + csvRows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(",")).join("\r\n"));
   zip.file(base + "실측표.txt", textSummary(site, list));
   if(window.XLSX) zip.file(base + "실측표.xlsx", XLSX.write(buildWorkbook(site, list), {bookType:"xlsx", type:"array"}));
@@ -1783,6 +2070,12 @@ async function importZip(file){
   }
 }
 
+/* 휴대폰 키보드가 올라오면 보이는 화면 높이에 맞춰 입력 창을 올린다 (특히 아이폰) */
+if(window.visualViewport){
+  const vv = window.visualViewport, rs = document.documentElement.style;
+  const fitVV = () => { rs.setProperty("--vv-h", vv.height + "px"); rs.setProperty("--vv-top", vv.offsetTop + "px"); };
+  vv.addEventListener("resize", fitVV); vv.addEventListener("scroll", fitVV); fitVV();
+}
 boot();
 })();
 </script>
