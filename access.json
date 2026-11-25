@@ -1,0 +1,6 @@
+{
+  "v": 1,
+  "enforce": false,
+  "maxOfflineDays": 7,
+  "users": []
+}
